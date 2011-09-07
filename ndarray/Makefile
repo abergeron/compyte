@@ -18,7 +18,7 @@ CUDA_FLAGS=-Xlinker -rpath -Xlinker ${CUDA_ROOT}/lib64 -Xlinker -rpath -Xlinker 
 pygpu_language_cuda.o: pygpu_language_cuda.cu pygpu_language.h
 	nvcc -c ${CFLAGS} -m64 -Xcompiler -fPIC,-m64 ${CUDA_FLAGS} ${INCLUDES} ${BINDIR} -o $@ $<
 
-pygpu_ndarray.so: pygpu_ndarray.c pygpu_ndarray.h pygpu_language_cuda.o pygpu_ndarray_object.h
+pygpu_ndarray.so: pygpu_ndarray.cpp pygpu_ndarray.h pygpu_language_cuda.o pygpu_ndarray_object.h
 	g++ -shared ${CFLAGS} -m64 -fPIC ${CUDA_FLAGS} ${INCLUDES} ${BINDIR} -o $@ pygpu_language_cuda.o $< -lpython${PYTHON_VERSION} -lcublas -lcudart
 
 clean:
