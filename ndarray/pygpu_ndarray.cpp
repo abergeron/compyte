@@ -369,7 +369,6 @@ PyGpuNdArray_Empty(int nd, npy_intp* dims, PyArray_Descr* dtype, int fortran)
         Py_DECREF(rval);
         return NULL;
     }
-
     if (verbose) fprintf(stderr, "PyGpuNdArray_Empty: end!\n");
     return (PyObject*) rval;
 }
@@ -769,6 +768,11 @@ static PyGetSetDef PyGpuNdArray_getset[] = {
         "Return the object stored in the base attribute",
         NULL},
     {"bytes",
+        (getter)PyGpuNdArray_get_data,
+        NULL,
+        "device data pointer",
+        NULL},
+    {"gpudata",
         (getter)PyGpuNdArray_get_data,
         NULL,
         "device data pointer",
