@@ -5,10 +5,16 @@ The elemwise fct are also used with scalar operation! So it can happen that ndim
 """
 
 
-import StringIO
 import numpy
+import StringIO
+
+import pycuda.autoinit
+import pycuda.driver as drv
+from pycuda.compiler import SourceModule
 from theano import Apply
 from theano import scalar
+from theano.tensor import TensorType
+import theano
 
 import logging
 _logger_name = 'compyte.ndarray'
@@ -21,6 +27,9 @@ def info(*msg):
     _logger.info(_logger_name+'INFO: '+' '.join(str(m) for m in msg))
 def debug(*msg):
     _logger.debug(_logger_name+'DEBUG: '+' '.join(str(m) for m in msg))
+
+
+import pygpu_ndarray as gpu_ndarray
 
 
 cast_int = numpy.intc
@@ -1016,45 +1025,181 @@ def dummy_holder_for_code_not_used():
         print sio.getvalue()
         return sio.getvalue()
 
-    
+def elemwise_collapses(inputs, outputs, out_shape=None, verbose=0):
+    """
+    This collapse dimensions that are not needed when computing elemwise.
+    This is usefull as it lower the indexing computation that is heavier on gpu then on cpu.
 
-def call_elemwise(fct, input_vals, block, grid=(1,1)):
-    """ broadcast not supported for now"""
-    inp = input_vals[0]
-    out_shape = [0]*len(inp.shape)
-    for i in input_vals[1:]:
-        #dtype checked by pycuda before gpu call
-        for s_i in range(len(inp.shape)):
-            assert inp.shape[s_i] == i.shape[s_i] or inp.shape[s_i] == 1 or  i.shape[s_i] == 1
-            out_shape[s_i] = max(out_shape[s_i],inp.shape[s_i],i.shape[s_i])
-    if pycuda_array:
-        o = gpuarray.zeros(out_shape, dtype=inp.dtype)
+    This is a generic version. It collapse dimensions at any place in the shape. It handle broadcasted dimensions correctly.
+
+    There is no special handling needed for broadcasted scalar at this level.
+
+    @return: tuple(ndim, strides) after collapsing.
+    """
+    in_out = inputs+outputs
+    del inputs
+    if out_shape is not None:
+        local_dims = list(out_shape)
     else:
-        o = gpu_ndarray.zeros(out_shape, dtype=inp.dtype)
+        # We should always have the same shape for all outputs
+        # If there is more then one outputs
+        local_dims = list(outputs[0].shape)
+    del outputs
+    nd_orig = len(local_dims)
+    collapsable = [1]*nd_orig
 
-    # nb element
-    args = [cast_uint(o.size)]
-    # output shape
-    for i in range(len(i.shape)):
-        args.append(cast_int(o.shape[i]))
-    
-    # for each input and the outputs
-    # the ptr and there strides
-    nd = len(inp.shape)
-    for i in input_vals+[o]:
+    def can_collapse(nd, dims, strides):
+        # Can we collapse dims[i] and dims[i-1]?
+        collapse = [1] * nd_orig
+        for i in range(nd-1,0,-1):
+            if strides[i]*dims[i] != strides[i-1]:
+                # The dims nd-1 are not strided again dimension nd
+                collapse[i]=0
+        return collapse
+
+    # Collapse dimension that are broadcast in all inputs.
+    # need to be done before contiguous collapse as it will break it.
+    # Update the dimensions and the strides
+    local_str = [None]*len(in_out)
+    nd_collapse = nd_orig
+    for ipos in xrange(len(in_out)):
+        inp = in_out[ipos]
+        assert len(inp.shape) == nd_orig, "All inputs/outputs must have the same number of dimensions. You must broadcast before calling elemwise_collapse"
+        local_str[ipos] = list(inp.strides)
+        # We set the strides of broacastable dims to 0
+        # This make indexing in gpu simpler and is needed
+        # For collapsing the dimensions.
+        for dim_pos in range(inp.ndim):
+            if inp.shape[dim_pos]==1:
+                local_str[ipos][dim_pos]=0
+
+    if verbose>2:
+        print "before broadcast collapse"
+        print " nd_collapse", nd_collapse
+        print " local_dims", local_dims
+        for ipos in xrange(len(local_str)):
+            print " local_str inputs", ipos, local_str[ipos]
+
+    for id in range(nd_collapse):
+        if local_dims[id] == 1:
+            for j in range(id+1,nd_collapse):# remove dims i from the array
+                local_dims[j-1] = local_dims[j]
+            for input_id in range(len(in_out)):
+                for j in range(id+1,nd_collapse): # remove dims i from the array
+                    local_str[input_id][j-1] = local_str[input_id][j]
+            nd_collapse -= 1
+            id -= 1
+
+    if verbose>2:
+        print "after broadcast collapse"
+        print " nd_collapse", nd_collapse
+        print " local_dims", local_dims
+        for ipos in xrange(len(local_str)):
+            print " local_str inputs", ipos, local_str[ipos]
+
+    nd_collapse_ = [1] * nd_orig
+    for ipos in xrange(len(local_str)):
+        nd_collapse_ipos = can_collapse(nd_collapse, local_dims, local_str[ipos])
+        for i in range(1,nd_collapse):
+            if nd_collapse_ipos[i]==0:
+                nd_collapse_[i]=0
+
+        if verbose>1:
+            print "nd_collapse_ipos", ipos, nd_collapse_ipos
+            print "nd_collapse_", nd_collapse_
+
+    # update the local stride.
+    for ipos in xrange(len(local_str)):
+        for i in range(nd_collapse-1,0,-1):
+            if nd_collapse_[i]==1:
+                local_str[ipos][i-1]=local_str[ipos][i]# set new strides
+                for j in range(i+1,nd_collapse): # remove stride i from the array
+                    local_str[ipos][j-1]=local_str[ipos][j]
+
+    # update the local dims.
+    for i in range(nd_collapse-1,0,-1):
+        if nd_collapse_[i] == 1:
+            local_dims[i-1]*=local_dims[i]
+            for j in range(i+1, nd_collapse):
+                local_dims[j-1]=local_dims[j]
+
+    # update the new number of dim
+    for i in range(1,nd_collapse):
+        if nd_collapse_[i]==1:
+            nd_collapse -= 1
+    if nd_collapse == 1:
+        l=[local_str[ipos][nd_collapse-1]==in_out[ipos].itemsize for ipos in range(len(local_str))]
+        if all(l):
+            nd_collapse=0
+
+    if verbose:
+        print "end collapsing"
+        print " nd_collapse", nd_collapse
+    if verbose>1:
+        print " local_dims", local_dims
+        for ipos in xrange(len(local_str)):
+            print " local_str inputs", ipos, local_str[ipos]
+
+    return nd_collapse, (local_dims, local_str)
+
+def call_elemwise(fct, input_vals, block, grid=(1,1), out=None,
+                  out_shape=None,
+                  strides=None):
+    """ Call an elemwise gpu function with gived inputs and block size.
+
+    :param fct: The gpu function to call
+    :param input_vals: a list of inputs to pass to fct
+    :param block: tuple. the size of the block wanted
+    :param grid: tuple. the size of the grid wanted
+    :param out: Optional, the preallocated output. Must have the right shape
+                and dtype.
+
+    :param out_shape: Optional, if provided, we will suppose that the output,
+                      have this shape event if it is not true.
+    :param strides: Optional, if provided, we will use those strides for the inputs and outputs.
+
+    :note: param out_shape and strides are used for the collapsing of dimensions.
+    """
+    inp = input_vals[0]
+
+    # Get the output and output shape to us
+    if out_shape is None and out is None:
+        out_shape = [0]*len(inp.shape)
+        for i in input_vals[1:]:
+        # dtype checked by pycuda before gpu call
+            for s_i in range(len(inp.shape)):
+                assert inp.shape[s_i] == i.shape[s_i] or inp.shape[s_i] == 1 or  i.shape[s_i] == 1
+                out_shape[s_i] = max(out_shape[s_i],inp.shape[s_i],i.shape[s_i])
+    if out is None:
+        out = gpu_ndarray.empty(out_shape, dtype=inp.dtype)
+    elif out_shape is None:
+        out_shape = out.shape
+
+    # Arg: nb element
+    args = [cast_uint(out.size)]
+    # Arg: output shape to the arguments.
+    for i in range(len(out_shape)):
+        args.append(cast_int(out_shape[i]))
+
+    # for each inputs and the output
+    # add its ptr and strides
+    nd = len(out_shape)
+    for idx,i in enumerate(list(input_vals)+[out]):
         itemsize = i.dtype.itemsize
         args.append(i)
         for j in range(nd):
             # We force a stride of 0 for broadcastable dimensions
             # This lower the index computation in the kernel.
-            if i.shape[j]==1:
+            if strides is not None:
+                # strides should have a strides of 0 for broadcasting.
+                args.append(cast_int(strides[idx][j]/itemsize))
+            elif i.shape[j]==1:
                 args.append(cast_int(0))
             else:
                 args.append(cast_int(i.strides[j]/itemsize))
     d = {"block":block, "grid":grid}
-    fct( *args, **d)
-    return o
-            
+    fct(*args, **d)
+    return out
 
 class MyGpuNdArray():
     _compiled_fct = {}
@@ -1064,24 +1209,70 @@ class MyGpuNdArray():
         self.ctype = ctype_from_dtype(self.gpu_nd_array.dtype)
 
     @staticmethod
-    def gen_fct(op, nb_in, nd, nodename = "TestNodeName"):
-        # Generate the gpu function
-        type = theano.tensor.TensorType(dtype, (False,)*nd)
-        out = op(*[type() for i in range(nb_in)])
-        node = out.owner
-        elemwise_algo = ElemwiseAlgo(node.op.scalar_op)
-        
-        # Compile the gpu function with pycuda
-        mod = SourceModule(
-            elemwise_algo.c_src_kernel(node.inputs, node.outputs, nodename, nd, static=""))
-        fct = mod.get_function("kernel_%s_%d"%(nodename, nd))
+    def gen_fct(op, inputs, nd, nodename = "TestNodeName"):
+        # Generate the gpu functions
+        nb_in = len(inputs)
+        fcts = [None]
+        for nd in range(1,nd+1):# 1 to nd
+            out = op(*[TensorType(i.gpu_nd_array.dtype, (False,)*nd)() for i in inputs])
+            out_dtype = out.dtype
+            node = out.owner
+            elemwise_algo = ElemwiseAlgo(node.op.scalar_op)
+
+            # Compile the gpu function with pycuda
+            mod = SourceModule(
+                elemwise_algo.c_src_kernel(node.inputs, node.outputs, nodename, nd, static=""))
+            fct = mod.get_function("kernel_%s_%d"%(nodename, nd))
+            fcts.append(fct)
 
         def call_fct(inputs):
+            " Call it without dimensions collapsing "
             assert len(inputs) == nb_in
-            inputs = [i.gpu_nd_array for i in inputs]
-            return call_elemwise(fct, inputs, block=(inputs[0].shape[-1],1,1))
-        return call_fct
-        
+            # dtype checked by pycuda
+            # TODO: assert nb dim?
+            # Compute the output shape.
+            inp = inputs[0]
+
+            # Compute the output shape.
+            out_shape = list(inp.shape)
+            for i in inputs[1:]:
+                for s_i in range(len(inp.shape)):
+                    assert inp.shape[s_i] == i.shape[s_i] or inp.shape[s_i] == 1 or  i.shape[s_i] == 1
+                    out_shape[s_i] = max(out_shape[s_i],i.shape[s_i])
+            # Create the output object
+            out = gpu_ndarray.empty(out_shape, dtype=out_dtype)
+
+            return call_elemwise(fct, inputs, block=(inputs[0].shape[-1],1,1), out=out_shape)
+
+        def call_fct2(inputs, test=False):
+            " Do dimensions collapsing before call the gpu code "
+            assert len(inputs) == nb_in
+            # dtype checked by pycuda
+            # TODO: assert nb dim?
+
+            inp = inputs[0]
+
+            # Compute the output shape.
+            out_shape = list(inp.shape)
+            for i in inputs[1:]:
+                for s_i in range(len(inp.shape)):
+                    assert inp.shape[s_i] == i.shape[s_i] or inp.shape[s_i] == 1 or  i.shape[s_i] == 1
+                    out_shape[s_i] = max(out_shape[s_i],i.shape[s_i])
+            # Create the output object
+            out = gpu_ndarray.empty(out_shape, dtype=out_dtype)
+
+            nd_col, info = elemwise_collapses(list(inputs),[out])
+            if nd_col == 0:
+                nd_col = 1
+
+            #inputs = [i.gpu_nd_array for i in inputs]
+            out = call_elemwise(fcts[nd_col], inputs,
+                                 block=(min(info[0][0],512),1,1),
+                                 out=out, out_shape=info[0][:nd_col],
+                                 strides=info[1])
+            return out
+        return call_fct2
+
     def __elemwise2__(self, other, name, op):
         """ Call this code on this op with 2 inputs """
         nd = len(self.gpu_nd_array.shape)#self.gpu_nd_array.ndim
@@ -1090,8 +1281,8 @@ class MyGpuNdArray():
         tag += '_'+str(other.gpu_nd_array.dtype)+str(other.gpu_nd_array.ndim)
         fct = self._compiled_fct.get(tag, None)
         if fct is None:
-            print "compile", tag
-            fct = MyGpuNdArray.gen_fct(op, 2, nd)
+#            print "compile", tag
+            fct = MyGpuNdArray.gen_fct(op, [self,other], nd)
             self._compiled_fct[tag] = fct
         return fct((self, other))
         
@@ -1106,11 +1297,24 @@ class MyGpuNdArray():
                              str(i.gpu_nd_array.ndim) for i in inputs])
         fct = cls._compiled_fct.get(tag, None)
         if fct is None:
-            print "compile", tag
-            fct = MyGpuNdArray.gen_fct(op, len(inputs), nd)
+#            print "compile", tag
+            fct = MyGpuNdArray.gen_fct(op, inputs, nd)
             cls._compiled_fct[tag] = fct
         return fct(inputs)
         
+
+    ndim = property(lambda self: self.gpu_nd_array.ndim, doc = "number of dimensions")
+    shape = property(lambda self: self.gpu_nd_array.shape)
+    dtype = property(lambda self: self.gpu_nd_array.dtype)
+    strides = property(lambda self: self.gpu_nd_array.strides)
+    itemsize = property(lambda self: self.gpu_nd_array.itemsize)
+    bytes = property(lambda self: self.gpu_nd_array.bytes)
+
+    # TODO: remove this when pycuda is updated to accept .bytes property!
+    gpudata = property(lambda self: self.gpu_nd_array.gpudata)
+
+    def __getitem__(self, *inputs):
+        return MyGpuNdArray(self.gpu_nd_array.__getitem__(*inputs))
 
     def __add__(self, other):
         return self.__elemwise2__(other, "add", theano.tensor.add)
@@ -1141,111 +1345,3 @@ class MyGpuNdArray():
         """ multiply all inputs togethers element-wise """
         return cls.__elemwise__(inputs, "mul", theano.tensor.mul)
 
-# numpy.allclose seam to have problem with int8...
-def all_close(x,y):
-    return (numpy.allclose(x,y) or
-            numpy.absolute(x-y).max() == 0)
-
-if __name__ == "__main__":
-    import theano
-
-    pycuda_array = False
-
-    if pycuda_array:
-        import pycuda.autoinit
-        import pycuda.driver as drv
-        from pycuda.compiler import SourceModule
-        from pycuda import gpuarray
-    else:
-        import pycuda.autoinit
-        import pycuda.driver as drv
-        from pycuda.compiler import SourceModule
-        import pygpu_ndarray as gpu_ndarray
-
-
-    #nodename = "TestNodeName"
-    #print elemwise_algo.c_src_kernel(inputs, outputs, nodename, nd)
-    #print elemwise_algo.c_src_kernel_Ccontiguous(inputs, outputs, nodename)
-    #print elemwise_algo.c_src_callkernel(inputs, outputs, nodename)
-    #print elemwise_algo.c_support_code_apply(inputs, outputs, nodename)
-    #print elemwise_algo.c_support_code()
-    ##sub = {}#Need to include "fail" keys in the dict
-    ##print elemwise_algo.c_code(inputs, outputs, nodename, inputs, outputs, sub)
-
-    def rand(shape, dtype):
-        r = numpy.random.randn(*shape)*10
-        return r.astype(dtype)
-
-    for dtype in ["int16", "float32", "int8"]:
-        print "dtype", dtype
-        for shape in [(500,),(50,5),(5,6,7)]:
-            print "Test inside a wrapping python object 2 inputs", shape
-            input_vals = [rand(shape, dtype) for i in range(2)]
-            if pycuda_array:
-                gpu_vals = [gpuarray.to_gpu(i) for i in input_vals]
-                to_cpu = lambda a: a.get()
-            else:
-                gpu_vals = [gpu_ndarray.GpuNdArrayObject(i) for i in input_vals]
-                to_cpu = numpy.asarray
-            assert all([numpy.allclose(to_cpu(ig), i) for ig,i in zip(gpu_vals,input_vals)])
-
-            gpu_vals = [MyGpuNdArray(x) for x in gpu_vals]
-            out = gpu_vals[0]+gpu_vals[1]
-            assert numpy.allclose(to_cpu(out), input_vals[0]+input_vals[1])
-            out = gpu_vals[0]-gpu_vals[1]
-            assert numpy.allclose(to_cpu(out), input_vals[0]-input_vals[1])
-            out = gpu_vals[0]*gpu_vals[1]
-            assert all_close(to_cpu(out), input_vals[0]*input_vals[1])
-            if dtype.startswith("float"):
-                out = gpu_vals[0]/gpu_vals[1]
-                assert numpy.allclose(to_cpu(out), input_vals[0]/input_vals[1])
-
-        nb_in = 4
-        for shape in [(500,),(50,5),(5,6,7)]:
-            print "Test inside a wrapping python object %d inputs"%nb_in, shape
-            input_vals = [rand(shape, dtype) for i in range(nb_in)]
-            if pycuda_array:
-                gpu_vals = [gpuarray.to_gpu(i) for i in input_vals]
-                to_cpu = lambda a: a.get()
-            else:
-                gpu_vals = [gpu_ndarray.GpuNdArrayObject(i)
-                            for i in input_vals]
-                to_cpu = numpy.asarray
-            assert all([numpy.allclose(to_cpu(ig), i)
-                        for ig,i in zip(gpu_vals,input_vals)])
-
-            gpu_vals = [MyGpuNdArray(x) for x in gpu_vals]
-            out = MyGpuNdArray.adds(*gpu_vals)
-            assert numpy.allclose(to_cpu(out),
-                                  reduce(numpy.add, input_vals))
-
-            out = MyGpuNdArray.multiplys(*gpu_vals)
-            assert all_close(to_cpu(out), reduce(numpy.multiply, input_vals))
-
-        nb_in = 2
-        for shapes in [((1,5),(4,5)), ((33,10),(33,1)),((33,1,5),(33,10,1)),
-                              ((33,1,5),(33,10,1),((1,10,5))),
-                              ]:
-            print "Test broadcasting", shapes
-            input_vals = [rand(shape, dtype) for shape in shapes]
-            if pycuda_array:
-                gpu_vals = [gpuarray.to_gpu(i) for i in input_vals]
-                to_cpu = lambda a: a.get()
-            else:
-                gpu_vals = [gpu_ndarray.GpuNdArrayObject(i)
-                            for i in input_vals]
-                to_cpu = numpy.asarray
-            assert all([numpy.allclose(to_cpu(ig), i)
-                        for ig,i in zip(gpu_vals,input_vals)])
-
-            gpu_vals = [MyGpuNdArray(x) for x in gpu_vals]
-            out = MyGpuNdArray.adds(*gpu_vals)
-            assert numpy.allclose(to_cpu(out),
-                                  reduce(numpy.add, input_vals))
-
-            out = MyGpuNdArray.multiplys(*gpu_vals)
-            assert all_close(to_cpu(out), reduce(numpy.multiply, input_vals))
-
-
-
-    print "All test finished!"
