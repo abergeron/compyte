@@ -99,17 +99,25 @@ def elemwise_helper(kern, vars):
     comp = theano.scalar.Composite(inputs_s, [sexp])
     alg = ElemwiseAlgo(comp)
     
+    # Bypass the collapsing. Lower overhead
     inputs_t = [t[k] for k in order]
     nodename = 'bench'
     klen = len(vars.values()[0].shape)
     mod = SourceModule(theano_support + alg.c_src_kernel(inputs_t, [texp], nodename, klen, static=""))
     fct = mod.get_function("kernel_%s_%d"%(nodename, klen))
 
+    # Do the collapsing
+    fct2 = MyGpuNdArray.gen_fct(theano.tensor.Elemwise(comp),
+                               [MyGpuNdArray(i) for i in vars.values()],
+                               vars.values()[0].ndim)
+
     def ndarray(gvars):
         inputs = [gvars[k] for k in order]
-#        gen_elemwise.pycuda_array = False
-        return call_elemwise(fct, inputs, block=(inputs[0].shape[-1], 1, 1))
-    return ndarray
+        return call_elemwise(fct, inputs, block=min(inputs[0].shape[-1],512))
+    def ndarray2(gvars):
+        inputs = [gvars[k] for k in order]
+        return fct2(inputs)
+    return ndarray, ndarray2
 
 def pycuda_helper(kern, vars):
     # this does float32 only
@@ -161,12 +169,20 @@ class bench(object):
             
         try:
             gvars = dict((k, gpu_ndarray.GpuNdArrayObject(v)) for k,v in vars.iteritems())
-            self.ndarray = elemwise_helper(self, gvars)
-            res = self.ndarray(gvars)
-            assert (res == ref).all()
-            timeit(lambda: self.ndarray(gvars), "ndarray ")
+            self.ndarray, self.ndarray2 = elemwise_helper(self, gvars)
+            if True:
+                res = self.ndarray(gvars)
+                assert (res == ref).all()
+                timeit(lambda: self.ndarray(gvars), "ndarray ")
+            if True:
+                res = self.ndarray2(gvars)
+                assert (res == ref).all()
+                timeit(lambda: self.ndarray2(gvars), "ndarray2")
         except Exception, e:
             print "ndarray: error", e
+            import traceback
+            traceback.print_exc()
+
         try:
             pvars = dict((k, gpuarray.to_gpu(v)) for k,v in vars.iteritems())
             res = self.pycuda(pvars)
@@ -178,9 +194,10 @@ class bench(object):
             traceback.print_exc()
 
 series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)", a=((100,), (1000,), (100, 200)))
-ap1 = bench("a+1", a=((100,), (1000,), (100, 200)))
+ap1 = bench("a+1", a=((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10)))#Too much mem on oolong: (1e6,), (1e8)))
 b2 = bench("2*a + 3*b", a=((100,),), b=((100,),))
 b3 = bench("a**2 + b**2 + 2*a*b", a=((100,),), b=((100,),))
+b4 = bench("2*a + b**10", a=((100,),), b=((100,),))
 
 if __name__ == "__main__":
     print ap1.exp
