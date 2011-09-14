@@ -19,30 +19,35 @@ try:
 except ImportError:
     pass
 
-def timeit_core(f, loops):
-# pycuda can't handle no gc beyond a certain number of calls
-#    gc.disable()
-    tstart = time.time()
-    for _ in xrange(loops):
-        f()
-    tend = time.time()
-#    gc.enable()
-    gc.collect()
+def timeit_core(f, loops, nogc):
+    if nogc:
+        gc.disable()
+    try:
+        tstart = time.time()
+        for _ in xrange(loops):
+            f()
+        tend = time.time()
+    finally:
+        if nogc:
+            gc.enable()
+        gc.collect()
 
     return (tend - tstart)/loops
 
-def timeit(f, lbl, n_tries=3):
+def timeit(f, lbl, n_tries=3, nogc=True):
     gc.disable()
-    ts = time.time()
-    f()
-    te = time.time()
-    gc.enable()
-    gc.collect()
+    try:
+        ts = time.time()
+        f()
+        te = time.time()
+    finally:
+        gc.enable()
+        gc.collect()
     est = te - ts
 
     loops = max(1, int(10**math.floor(math.log(10/est, 10))))
     
-    mintime = min(timeit_core(f, loops) for _ in xrange(n_tries))
+    mintime = min(timeit_core(f, loops, nogc) for _ in xrange(n_tries))
     
     print lbl, "(", loops, "loops ):", mintime, "s ( best of", n_tries, ")"
     return mintime
@@ -85,39 +90,37 @@ def empty(vars):
 def elemwise_helper(kern, vars):
     import theano
     s = dict((k, theano.scalar.ScalarVariable(theano.scalar.Scalar(str(v.dtype)))) for k, v in vars.iteritems())
-    t = dict((k, theano.tensor.TensorVariable(theano.tensor.TensorType(str(v.dtype), (False,)*len(v.shape)))) for k, v in vars.iteritems())
 
     theano_code = theano_tmpl%(kern.exp,)
     res = s.copy()
     exec theano_code in theano_smap, res
     sexp = res['exp']
-    res = t.copy()
-    exec theano_code in theano_tmap, res
-    texp = res['exp']
+
     order = vars.keys()
     inputs_s = [s[k] for k in order]
     comp = theano.scalar.Composite(inputs_s, [sexp])
-    alg = ElemwiseAlgo(comp)
     
-    # Bypass the collapsing. Lower overhead
-    inputs_t = [t[k] for k in order]
-    nodename = 'bench'
-    klen = len(vars.values()[0].shape)
-    mod = SourceModule(theano_support + alg.c_src_kernel(inputs_t, [texp], nodename, klen, static=""))
-    fct = mod.get_function("kernel_%s_%d"%(nodename, klen))
-
-    # Do the collapsing
-    fct2 = MyGpuNdArray.gen_fct(theano.tensor.Elemwise(comp),
+    fct = MyGpuNdArray.gen_fct(theano.tensor.Elemwise(comp),
                                [MyGpuNdArray(i) for i in vars.values()],
                                vars.values()[0].ndim)
 
     def ndarray(gvars):
         inputs = [gvars[k] for k in order]
-        return call_elemwise(fct, inputs, block=min(inputs[0].shape[-1],512))
-    def ndarray2(gvars):
-        inputs = [gvars[k] for k in order]
-        return fct2(inputs)
-    return ndarray, ndarray2
+        return fct(inputs)
+
+    return ndarray
+
+def shape_iter(key, shapes):
+    for s in shapes:
+        shape = [v[0] if isinstance(v, (list, tuple)) else v for v in s]
+        stride = [v[1] if isinstance(v, (list, tuple)) else 1 for v in s]
+        val = numpy.random.random(shape).astype('float32')
+        val = val[tuple(slice(None, None, st) for st in stride)]
+        yield key, val
+
+def var_iter(vars):
+    for v in zip(*[shape_iter(k, v) for k, v in vars.iteritems()]):
+        yield dict(v)
 
 def pycuda_helper(kern, vars):
     # this does float32 only
@@ -125,7 +128,7 @@ def pycuda_helper(kern, vars):
     for k in order:
         kern = kern.replace(k, k+'[i]')
     kern = '__out[i] = '+kern
-    ek = ElementwiseKernel('float *__out,' + ','.join("float *%s"%(n,) for n in order), kern)
+    ek = ElementwiseKernel('float *__out,' + ','.join("const float *%s"%(n,) for n in order), kern)
     def pycuda(vars):
         inputs = [vars[k] for k in order]
         out = gpuarray.empty_like(inputs[0])
@@ -149,10 +152,8 @@ class bench(object):
         self.pycuda = pycuda_helper(self.exp, self.vars)
 
     def run(self):
-        keys = self.vars.keys()
-        for shapes in zip(*[self.vars[k] for k in keys]):
-            vals = dict((k, numpy.random.random(s).astype('float32')) for k, s in zip(keys, shapes))
-            print zip(keys, shapes)
+        for vals in var_iter(self.vars):
+            print [(k, v.shape) for k, v, in vals.items()]
             self.one_try(vals)
         
     def one_try(self, vars):
@@ -169,29 +170,21 @@ class bench(object):
             
         try:
             gvars = dict((k, gpu_ndarray.GpuNdArrayObject(v)) for k,v in vars.iteritems())
-            self.ndarray, self.ndarray2 = elemwise_helper(self, gvars)
-            if True:
-                res = self.ndarray(gvars)
-                assert (res == ref).all()
-                timeit(lambda: self.ndarray(gvars), "ndarray ")
-            if True:
-                res = self.ndarray2(gvars)
-                assert (res == ref).all()
-                timeit(lambda: self.ndarray2(gvars), "ndarray2")
+            self.ndarray = elemwise_helper(self, gvars)
+            res = self.ndarray(gvars)
+            assert (res == ref).all()
+            timeit(lambda: self.ndarray(gvars), "compyte ")
         except Exception, e:
-            print "ndarray: error", e
-            import traceback
-            traceback.print_exc()
+            print "compyte: error", e
 
         try:
             pvars = dict((k, gpuarray.to_gpu(v)) for k,v in vars.iteritems())
             res = self.pycuda(pvars)
             assert (res.get() == ref).all()
-            timeit(lambda: self.pycuda(pvars), "pycuda  ")
+            # pycuda can't handle no gc beyond about 10000 of calls
+            timeit(lambda: self.pycuda(pvars), "pycuda  ", nogc=False)
         except Exception, e:
             print "pycuda: error", e
-            import traceback
-            traceback.print_exc()
 
 series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)", a=((100,), (1000,), (100, 200)))
 ap1 = bench("a+1", a=((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10)))#Too much mem on oolong: (1e6,), (1e8)))
