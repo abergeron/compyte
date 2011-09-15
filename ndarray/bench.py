@@ -193,13 +193,20 @@ class bench(object):
             import traceback
             traceback.print_exc()
 
-series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)", a=((100,), (1000,), (100, 200)))
-ap1 = bench("a+1", a=((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10)))#Too much mem on oolong: (1e6,), (1e8)))
+series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)",
+               a=((100,), (1000,), (100, 200)))
+#Too much mem on oolong: (1e6,), (1e8)))
+shapes = ((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10))
+#shapes = ((100,10,10,10),)
+ap1 = bench("a+1", a=shapes)
+apb = bench("a+b", a=shapes, b=shapes)
 b2 = bench("2*a + 3*b", a=((100,),), b=((100,),))
 b3 = bench("a**2 + b**2 + 2*a*b", a=((100,),), b=((100,),))
 b4 = bench("2*a + b**10", a=((100,),), b=((100,),))
 
 if __name__ == "__main__":
+    print apb.exp
+    apb.run()
     print ap1.exp
     ap1.run()
 #    print b2.exp
