@@ -152,45 +152,107 @@ class bench(object):
         self.pycuda = pycuda_helper(self.exp, self.vars)
 
     def run(self):
+        res = []
         for vals in var_iter(self.vars):
             print [(k, v.shape) for k, v, in vals.items()]
-            self.one_try(vals)
-        
-    def one_try(self, vars):
-        timeit(lambda: self.empty(vars), "baseline")
-        ref = self.numpy(**vars)
-        timeit(lambda: self.numpy(**vars), "numpy   ")
+            res.append(self.one_try(vals))
+        return res
+
+    def try_numpy(self, vars, retval=None):
+        t = timeit(lambda: self.numpy(**vars), "numpy   ")
+        if retval is not None:
+            retval['numpy'] = t
+        return t
+    
+    def try_numpexpr(self, vars, ref=None, retval=None):
         # to cache the expression, since we don't want to time the compile
         try:
             res = self.numexpr(vars)
-            assert (res == ref).all()
-            timeit(lambda: self.numexpr(vars), "numexpr ")
+            if ref is not None:
+                assert (res == ref).all()
+            t = timeit(lambda: self.numexpr(vars), "numexpr ")
+            if retval is not None:
+                retval['numexpr'] = t
+            return t
         except Exception, e:
             print "numexpr: error", e
-            
+    
+    def try_compyte(self, vars, ref=None, retval=None):
         try:
             gvars = dict((k, gpu_ndarray.GpuNdArrayObject(v)) for k,v in vars.iteritems())
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
-            assert (res == ref).all()
-            timeit(lambda: self.ndarray(gvars), "compyte ")
+            if ref is not None:
+                assert (res == ref).all()
+            t = timeit(lambda: self.ndarray(gvars), "compyte ")
+            if retval is not None:
+                retval['compyte'] = t
+            return t
         except Exception, e:
             print "compyte: error", e
 
+    def try_pycuda(self, vars, ref=None, retval=None):
         try:
             pvars = dict((k, gpuarray.to_gpu(v)) for k,v in vars.iteritems())
             res = self.pycuda(pvars)
-            assert (res.get() == ref).all()
+            if ref is not None:
+                assert (res.get() == ref).all()
             # pycuda can't handle no gc beyond about 10000 of calls
-            timeit(lambda: self.pycuda(pvars), "pycuda  ", nogc=False)
+            t = timeit(lambda: self.pycuda(pvars), "pycuda  ", nogc=False)
+            if retval is not None:
+                retval['pycuda'] = t
+            return t
         except Exception, e:
             print "pycuda: error", e
+    
+    def one_try(self, vars):
+        retval = {}
+        timeit(lambda: self.empty(vars), "baseline")
+
+        ref = self.numpy(**vars)
+        retval['numpy'] = timeit(lambda: self.numpy(**vars), "numpy   ")
+
+        self.try_numexpr(vars, ref=ref, retval=retval)
+        self.try_compyte(vars, ref=ref, retval=retval)
+        self.try_pycuda(vars, ref=ref, retval=retval)
+        
+        return retval
+
+def prod(seq):
+    s = 1
+    for x in seq:
+        s *= x
+    return s
+
+MARKERS = ['+', '*', ',', '.', '1', '2', '3', '4', '<', '>', 'D', 'H', '^', '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
+COLORS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+
+def make_graph(name, b, msa):
+    import matplotlib
+    matplotlib.use('PDF') # maybe Agg or Cairo
+    import matplotlib.pyplot as plt
+
+    idx = 0
+    for lbl, m, shapes in msa:
+        vars = {}
+        for k in b.vars.keys():
+            vars[k] = shapes
+        xvals = [prod(shp) for shp in shapes]
+        yvals = [m(b, vals) for vals in var_iter(vars)]
+        plt.semilogx(xvals, yvals, label=lbl,
+                     color=COLORS[idx], marker=MARKERS[idx])
+        idx += 1
+    plt.legend()
+    plt.savefig(name+'.pdf')
+    plt.cla()
+    plt.clf()
 
 series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)",
                a=((100,), (1000,), (100, 200)))
 #Too much mem on oolong: (1e6,), (1e8)))
-shapes = ((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10))
+#shapes = ((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10))
 #shapes = ((100,10,10,10),)
+shapes = ((1e2,), (1e3,))#, (1e4,), (1e5,), (1e6,), (1e7,))
 ap1 = bench("a+1", a=shapes)
 apb = bench("a+b", a=shapes, b=shapes)
 b2 = bench("2*a + 3*b", a=((100,),), b=((100,),))
@@ -198,13 +260,10 @@ b3 = bench("a**2 + b**2 + 2*a*b", a=((100,),), b=((100,),))
 b4 = bench("2*a + b**10", a=((100,),), b=((100,),))
 
 if __name__ == "__main__":
-    print apb.exp
-    apb.run()
-    print ap1.exp
-    ap1.run()
-#    print b2.exp
-#    b2.run()
-#    print b3.exp
-#    b3.run()
-#    print series.exp
-#    series.run()
+    msa = [('pycuda', bench.try_pycuda, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+           ('compyte 1d', bench.try_compyte, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+           ('compyte 2d', bench.try_compyte, ((10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000), (10000, 1000))),
+           ('compyte 3d', bench.try_compyte, ((10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10), (100, 100, 100), (1000, 100, 100))),
+           ('compyte 4d', bench.try_compyte, ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
+    make_graph('ap1', ap1, msa=msa)
+#    make_graph('apb', apb, msa=msa)
