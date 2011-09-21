@@ -1,4 +1,4 @@
-import gc, time, math
+import gc, time, math, re
 import numpy
 import numexpr
 import theano
@@ -20,6 +20,7 @@ except ImportError:
     pass
 
 def timeit_core(f, loops, nogc):
+    gc.collect()
     if nogc:
         gc.disable()
     try:
@@ -125,6 +126,7 @@ def var_iter(vars):
 def pycuda_helper(kern, vars):
     # this does float32 only
     order = vars.keys()
+    kern = re.sub(r'([0-9a-z.]+)\*\*([0-9a-z.]+)', r'powf(\1, \2)', kern)
     for k in order:
         kern = kern.replace(k, k+'[i]')
     kern = '__out[i] = '+kern
@@ -164,7 +166,7 @@ class bench(object):
             retval['numpy'] = t
         return t
     
-    def try_numpexpr(self, vars, ref=None, retval=None):
+    def try_numexpr(self, vars, ref=None, retval=None):
         # to cache the expression, since we don't want to time the compile
         try:
             res = self.numexpr(vars)
@@ -183,8 +185,8 @@ class bench(object):
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
             if ref is not None:
-                assert (res == ref).all()
-            t = timeit(lambda: self.ndarray(gvars), "compyte ")
+                assert numpy.allclose(res, ref)
+            t = timeit(lambda: self.ndarray(gvars), "compyte ", nogc=False)
             if retval is not None:
                 retval['compyte'] = t
             return t
@@ -196,7 +198,7 @@ class bench(object):
             pvars = dict((k, gpuarray.to_gpu(v)) for k,v in vars.iteritems())
             res = self.pycuda(pvars)
             if ref is not None:
-                assert (res.get() == ref).all()
+                assert numpy.allclose(res.get(), ref)
             # pycuda can't handle no gc beyond about 10000 of calls
             t = timeit(lambda: self.pycuda(pvars), "pycuda  ", nogc=False)
             if retval is not None:
@@ -204,6 +206,8 @@ class bench(object):
             return t
         except Exception, e:
             print "pycuda: error", e
+            import traceback
+            traceback.print_exc()
     
     def one_try(self, vars):
         retval = {}
@@ -242,7 +246,7 @@ def make_graph(name, b, msa):
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
-    plt.legend()
+    plt.legend(loc='upper left')
     plt.savefig(name+'.pdf')
     plt.cla()
     plt.clf()
@@ -265,5 +269,10 @@ if __name__ == "__main__":
            ('compyte 2d', bench.try_compyte, ((10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000), (10000, 1000))),
            ('compyte 3d', bench.try_compyte, ((10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10), (100, 100, 100), (1000, 100, 100))),
            ('compyte 4d', bench.try_compyte, ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
+
     make_graph('ap1', ap1, msa=msa)
-#    make_graph('apb', apb, msa=msa)
+    make_graph('apb', apb, msa=msa)
+    make_graph('2ap3b', b2, msa=msa)
+    make_graph('a2pb2p2ab', b3, msa=msa)
+    make_graph('2apb10', b4, msa=msa)
+    make_graph('series', series, msa=msa)
