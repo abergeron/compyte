@@ -126,7 +126,7 @@ def var_iter(vars):
 def pycuda_helper(kern, vars):
     # this does float32 only
     order = vars.keys()
-    kern = re.sub(r'([0-9a-z.]+)\*\*([0-9a-z.]+)', r'powf(\1, \2)', kern)
+    kern = re.sub(r'([0-9a-z.]+)\*\*([0-9a-z.]+)', r'pow(\1, \2)', kern)
     for k in order:
         kern = kern.replace(k, k+'[i]')
     kern = '__out[i] = '+kern
