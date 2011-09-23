@@ -13,3 +13,8 @@ distribute*tar.gz
 *.so
 *.o
 *.cu.cpp
+*.pdf
+*.aux
+*.bbl
+*.blg
+*.log
