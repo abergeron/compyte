@@ -26,3 +26,11 @@ clean:
 
 cleantmp:
 	rm -f core.* *.o *~
+
+BigLearn_NipsWorkshop.pdf: BigLearn_NipsWorkshop.tex
+	#latex BigLearn_NipsWorkshop.tex
+	#dvipdf latex BigLearn_NipsWorkshop
+	pdflatex BigLearn_NipsWorkshop
+	pdflatex BigLearn_NipsWorkshop
+	bibtexall
+	pdflatex BigLearn_NipsWorkshop

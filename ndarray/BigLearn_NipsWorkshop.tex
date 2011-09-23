@@ -1,0 +1,227 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{nips11submit_e,times}
+\usepackage{natbib}
+%\documentstyle[nips10submit_09,times,art10]{article} % For LaTeX 2.09
+
+
+\title{A Common GPU N dimensions array}
+
+
+\author{
+Frédéric Bastien\thanks{ Use footnote for providing further information
+about author (webpage, alternative address)---\emph{not} for acknowledging
+funding agencies.} \\
+D\'epartement d'Informatique et de Recherche Op\'erationelle\\
+Universit\'e de Montr\'eal\\
+Montréal, Canada \\
+\texttt{nouiz@nouiz.org} \\
+\And
+Coauthor \\
+Affiliation \\
+Address \\
+\texttt{email} \\
+\AND
+Coauthor \\
+Affiliation \\
+Address \\
+\texttt{email} \\
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\nipsfinalcopy % Uncomment for camera-ready version
+
+\begin{document}
+
+
+\maketitle
+
+\begin{abstract}
+Currently there is multiple array/matrix/n-dimensional array
+object that exist on the gpu.  This hinder sharing gpu code and cause
+duplicate development work. This paper present a proposition and a
+first version for a common gpu n-dimensional array(tensor) on the GPU. It will
+work on CUDA and OpenCL. It will be usable in python and C++.
+\end{abstract}
+
+\section{Introduction}
+Motivation:
+    * Currently there is at least 4 different gpu array in python
+          o CudaNdarray(Theano), GPUArray(pycuda) and CUDAMatrix(cudamat), GPUArray(pyopencl), ...
+          o There is even more if we include other language.
+    * They are incompatible
+          o None have the same properties and interface
+    * All of them are a subset of numpy.ndarray on the gpu!
+
+Lack of Standard Creates Problems
+
+    * Duplicate work
+          o GPU code is harder/slower to do correctly and fast than on the CPU/python
+    * Harder to port/reuse code
+    * Harder to find/distribute code
+    * Divides development work
+
+
+\subsection{Pitfall to Avoid}
+    * Start alone
+          o We need different people/groups to ``adopt'' the new GpuNdArray
+    * Too simple - other projects won't adopt as it won't fit there need.
+    * Too general - other projects will implement ``light'' version... and not adopt
+          o Having an easy way to convert/check conditions as numpy could alleviate this.
+
+
+\subsection{Goal}
+    * Make a n dimensionals array on the gpu that support strides
+    * Make the python interface VERY similar to numpy.ndarray
+          o Easier to attract other peole from python community
+    * Have the base object in C to allow collaboration with more project.
+          o We want people from C, C++, ruby, R, ... all use the same base Gpu ndarray.
+    * Be compatible with CUDA and OpenCL
+
+
+The option choosed is to have a n-dimensional array(tensor) with easy
+check/conversion to easily allow supporting only a subset!
+
+Make a common GPU ndarray(matrix/tensor or n dimensions) that can be reused by all project
+WARNING
+
+This is in early development. So all what you read is discutable. If you have idea send them to the mailing list!
+Mailing list
+
+    * Development/user mailing list: http://lists.tiker.net/listinfo/gpundarray
+    * Announce mailing list(low volume): http://lists.tiker.net/listinfo/gpundarray-announce
+
+Multiple backend:
+
+Current behavior not wanted
+
+    * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
+
+
+\section{Existing Implementation}
+\subsection{Theano(CudaNdarray)}
+Theano~\citep{bergstra+al:2010-scipy}
+tensor with strides, float32 only, cuda only
+\subsection{PyCUDA/PyOpenCL(GPUArray)}
+contiguous memory only, cuda or opencl only(similar interface)?
+can use both in the same programme. all dtype
+\subsection{cudamat(CUDAMat)}
+cuda only, float32 only I think
+\subsection{Gnumpy}
+on top of cudamat.
+\subsection{Trust}
+vector only. CUDA only, all dtype
+
+\section{Current implementation}
+
+
+\subsection{Functinality}
+fct implemented language dependent
+cuda
+malloc/free
+memcopy
+memset
+from cpu to gpu
+from gpu to cpu
+
+gpu agnos:
+sub tensor
+deepcopy
+view
+zeros
+empty
+
+probably gpu agnos, not sure:
+elemwise
+elemwise dimensions collapsing
+
+
+todo:
+assignation
+reshape
+n dimensional tranpose
+dot22,gemm
+reduce along all dimensions, along one axis or a list of dimensions
+reduce dimensions collapsing
+
+\subsection{Files structure}
+File structure that allow using Cuda and PyOpenCL use the same code for some functionality.
+
+\section{Benchmark}
+\section{Futur Plan}
+\section{Conclusion}
+
+\section{Citations, figures, tables, references}
+\label{others}
+
+These instructions apply to everyone, regardless of the formatter being used.
+
+\subsection{Citations within the text}
+
+Citations within the text should be numbered consecutively. The corresponding
+number is to appear enclosed in square brackets, such as [1] or [2]-[5]. The
+corresponding references are to be listed in the same order at the end of the
+paper, in the \textbf{References} section. (Note: the standard
+\textsc{Bib\TeX} style \texttt{unsrt} produces this.) As to the format of the
+references themselves, any style is acceptable as long as it is used
+consistently.
+
+\begin{table}[t]
+\caption{Sample table title}
+\label{sample-table}
+\begin{center}
+\begin{tabular}{ll}
+\multicolumn{1}{c}{\bf PART}  &\multicolumn{1}{c}{\bf DESCRIPTION}
+\\ \hline \\
+Dendrite         &Input terminal \\
+Axon             &Output terminal \\
+Soma             &Cell body (contains cell nucleus) \\
+\end{tabular}
+\end{center}
+\end{table}
+
+\section{Preparing PostScript or PDF files}
+
+\subsection{Margins in LaTeX}
+ 
+Most of the margin problems come from figures positioned by hand using
+\verb+\special+ or other commands. We suggest using the command
+\verb+\includegraphics+
+from the graphicx package. Always specify the figure width as a multiple of
+the line width as in the example below using .eps graphics
+\begin{verbatim}
+   \usepackage[dvips]{graphicx} ... 
+   \includegraphics[width=0.8\linewidth]{myfile.eps} 
+\end{verbatim}
+or % Apr 2009 addition
+\begin{verbatim}
+   \usepackage[pdftex]{graphicx} ... 
+   \includegraphics[width=0.8\linewidth]{myfile.pdf} 
+\end{verbatim}
+for .pdf graphics. 
+See section 4.4 in the graphics bundle documentation (http://www.ctan.org/tex-archive/macros/latex/required/graphics/grfguide.ps) 
+ 
+A number of width problems arise when LaTeX cannot properly hyphenate a
+line. Please give LaTeX hyphenation hints using the \verb+\-+ command.
+
+
+\subsubsection*{Acknowledgments}
+
+Use unnumbered third level headings for the acknowledgments. All
+acknowledgments go at the end of the paper. Do not include 
+acknowledgments in the anonymized submission, only in the 
+final paper. 
+
+\bibliography{strings,strings-shorter,ml,aigaion-shorter}
+\bibliographystyle{plain}
+
+\end{document}
