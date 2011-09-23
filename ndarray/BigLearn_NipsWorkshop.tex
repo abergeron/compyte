@@ -13,7 +13,7 @@ about author (webpage, alternative address)---\emph{not} for acknowledging
 funding agencies.} \\
 D\'epartement d'Informatique et de Recherche Op\'erationelle\\
 Universit\'e de Montr\'eal\\
-Montréal, Canada \\
+Montr\'eal, Canada \\
 \texttt{nouiz@nouiz.org} \\
 \And
 Coauthor \\
@@ -49,62 +49,100 @@ Address \\
 Currently there is multiple array/matrix/n-dimensional array
 object that exist on the gpu.  This hinder sharing gpu code and cause
 duplicate development work. This paper present a proposition and a
-first version for a common gpu n-dimensional array(tensor) on the GPU. It will
+first version~\citep{GpuNdArray} for a common gpu n-dimensional array(tensor) on the GPU. It will
 work on CUDA and OpenCL. It will be usable in python and C++.
 \end{abstract}
 
 \section{Introduction}
-Motivation:
-    * Currently there is at least 4 different gpu array in python
-          o CudaNdarray(Theano), GPUArray(pycuda) and CUDAMatrix(cudamat), GPUArray(pyopencl), ...
-          o There is even more if we include other language.
-    * They are incompatible
-          o None have the same properties and interface
-    * All of them are a subset of numpy.ndarray on the gpu!
+Currently there is at least 4 differents gpu array in python:
+CudaNdarray(Theano), GPUArray(pycuda) and CUDAMatrix(cudamat),
+GPUArray(pyopencl). There is also other implementation like Trust in
+C++.  The problem is that they are not compatible with each
+others. All of them have the caracteristic of being a subest of a
+tensor(n-dimensional array) that support strides like what Numpy
+implement on the CPU.  
 
-Lack of Standard Creates Problems
+Strides are a way to have a view on some memory location that for
+example view only odd or even row of a matrix. More generally this
+allow to make a view on existing tensor memory space while the view
+see only some part of it. It accept as definition of part to take for
+each dimensions a range of elements with a step different then 1
+between each consecutive elements in the view.
 
-    * Duplicate work
-          o GPU code is harder/slower to do correctly and fast than on the CPU/python
-    * Harder to port/reuse code
-    * Harder to find/distribute code
-    * Divides development work
+We think that one of the reason why there is so many differents bases
+objects is that on the gpu, implementing a general tensor with strides
+make coding for GPU even harder. This can be easily bypassed by using
+function to check/convert some condition on the memory layout. For
+example, if a developer want to only consider inputs in C or Fortran order
+for one function, he could just call a function on his inputs to convert the input
+into its choosed inputs layout.
 
+The lack of a common GPU tensor create many problems. Here is a few:
+\begin{itemize}
+  \item Duplicate work
+  \item Harder to port/reuse code
+  \item Harder to find/distribute code
+  \item Divides development work
+\end{itemize}
+
+All those problem are agravated by the fact that GPU code is
+harder/slower to do correctly and fast than serial CPU code.
 
 \subsection{Pitfall to Avoid}
-    * Start alone
-          o We need different people/groups to ``adopt'' the new GpuNdArray
-    * Too simple - other projects won't adopt as it won't fit there need.
-    * Too general - other projects will implement ``light'' version... and not adopt
-          o Having an easy way to convert/check conditions as numpy could alleviate this.
+\begin{itemize}
+\item Start alone
+  \begin{itemize}
+  \item We need different people/groups to ``adopt'' the new GpuNdArray
+  \end{itemize}
+\item Too simple(ex: just a 1d array) - other projects won't adopt as it won't fit there need.
+\item Too general - other projects will implement ``light'' version... and not adopt
+  \begin{itemize}
+  \item Having an easy way to convert/check conditions could alleviate this.
+  \end{itemize}
+\end{itemize}
+
+\subsection{Goal/Strategy}
+The goal is to have a common GPU object that will be used by every body. We think that the best strategy is:
+
+\begin{itemize}
+\item Make a n dimensionals array on the gpu that support strides
+\item Make the python interface similar to numpy.ndarray
+  \begin{itemize}
+  \item Easier to attract other peole from python community
+  \end{itemize}
+\item Have the base object in C to allow collaboration with more project.
+  \begin{itemize}
+  \item  want people from C, C++, ruby, R, ... all use the same base Gpu ndarray.
+  \end{itemize}
+\item Be compatible with CUDA and OpenCL
+\end{itemize}
 
 
-\subsection{Goal}
-    * Make a n dimensionals array on the gpu that support strides
-    * Make the python interface VERY similar to numpy.ndarray
-          o Easier to attract other peole from python community
-    * Have the base object in C to allow collaboration with more project.
-          o We want people from C, C++, ruby, R, ... all use the same base Gpu ndarray.
-    * Be compatible with CUDA and OpenCL
+We think that for a common GPU object, we need an n dimensionals
+array. This is motivated that forcing user to use an object that
+support only 1 or 2 dimensions add complexity to the user when he need
+to deal with algorithms that have natively more then 2 dimensions. We
+don't think that this complexity should be deal by each users for each
+such problems. Having a base object that support n-dimensions, remove
+this coding complexity from the user point of view.
 
+From the developer point of view, sometimes it is worth to support
+strided tensor as inputs. But this is not the case. We don't think
+that asking the developers that choose to don't support n-dimensionals
+inputs to call a function to assert/convert the inputs memory layout
+is something too complicated or time consuming. Especially when those
+functions are provided and compared again reimplementing its own objects.
 
-The option choosed is to have a n-dimensional array(tensor) with easy
-check/conversion to easily allow supporting only a subset!
+Many times, the inputs layout choosed by the developer of a function
+will lead to better memory access pattern then a random memory
+layout. So this is not trivial to say that generalizing the
+implementation to support general memory layout will lead to
+significant performance gain. If someone else want to use this
+implementation without having this memory layout conversion, he could
+genearalize it himself. But having a working implementaiton is really
+useful to get started and help in the frequent case where this is not a
+bottleneck in your code.
 
-Make a common GPU ndarray(matrix/tensor or n dimensions) that can be reused by all project
-WARNING
-
-This is in early development. So all what you read is discutable. If you have idea send them to the mailing list!
-Mailing list
-
-    * Development/user mailing list: http://lists.tiker.net/listinfo/gpundarray
-    * Announce mailing list(low volume): http://lists.tiker.net/listinfo/gpundarray-announce
-
-Multiple backend:
-
-Current behavior not wanted
-
-    * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
 
 
 \section{Existing Implementation}
@@ -112,19 +150,27 @@ Current behavior not wanted
 Theano~\citep{bergstra+al:2010-scipy}
 tensor with strides, float32 only, cuda only
 \subsection{PyCUDA/PyOpenCL(GPUArray)}
+PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009}.
 contiguous memory only, cuda or opencl only(similar interface)?
 can use both in the same programme. all dtype
 \subsection{cudamat(CUDAMat)}
-cuda only, float32 only I think
+CUDAMat~\citep{cudamat-TR2009} cuda only, float32 only I think
 \subsection{Gnumpy}
-on top of cudamat.
+Gnumpy~\citep{gnumpy-TR2010} on top of cudamat.
 \subsection{Trust}
-vector only. CUDA only, all dtype
+Trust~\citep{Thrust} vector only. CUDA only, all dtype
 
 \section{Current implementation}
+Multiple backend:
+Current behavior not wanted
+    * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
 
+
+\section{Existing Implementation}
 
 \subsection{Functinality}
+
+
 fct implemented language dependent
 cuda
 malloc/free
