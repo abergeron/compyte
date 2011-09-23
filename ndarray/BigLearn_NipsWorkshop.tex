@@ -160,58 +160,30 @@ File structure that allow using Cuda and PyOpenCL use the same code for some fun
 \section{Futur Plan}
 \section{Conclusion}
 
-\section{Citations, figures, tables, references}
-\label{others}
-
-These instructions apply to everyone, regardless of the formatter being used.
-
-\subsection{Citations within the text}
-
-Citations within the text should be numbered consecutively. The corresponding
-number is to appear enclosed in square brackets, such as [1] or [2]-[5]. The
-corresponding references are to be listed in the same order at the end of the
-paper, in the \textbf{References} section. (Note: the standard
-\textsc{Bib\TeX} style \texttt{unsrt} produces this.) As to the format of the
-references themselves, any style is acceptable as long as it is used
-consistently.
-
-\begin{table}[t]
-\caption{Sample table title}
-\label{sample-table}
-\begin{center}
-\begin{tabular}{ll}
-\multicolumn{1}{c}{\bf PART}  &\multicolumn{1}{c}{\bf DESCRIPTION}
-\\ \hline \\
-Dendrite         &Input terminal \\
-Axon             &Output terminal \\
-Soma             &Cell body (contains cell nucleus) \\
-\end{tabular}
-\end{center}
-\end{table}
 
 \section{Preparing PostScript or PDF files}
 
-\subsection{Margins in LaTeX}
- 
-Most of the margin problems come from figures positioned by hand using
-\verb+\special+ or other commands. We suggest using the command
-\verb+\includegraphics+
-from the graphicx package. Always specify the figure width as a multiple of
-the line width as in the example below using .eps graphics
-\begin{verbatim}
-   \usepackage[dvips]{graphicx} ... 
-   \includegraphics[width=0.8\linewidth]{myfile.eps} 
-\end{verbatim}
-or % Apr 2009 addition
-\begin{verbatim}
-   \usepackage[pdftex]{graphicx} ... 
-   \includegraphics[width=0.8\linewidth]{myfile.pdf} 
-\end{verbatim}
-for .pdf graphics. 
-See section 4.4 in the graphics bundle documentation (http://www.ctan.org/tex-archive/macros/latex/required/graphics/grfguide.ps) 
- 
-A number of width problems arise when LaTeX cannot properly hyphenate a
-line. Please give LaTeX hyphenation hints using the \verb+\-+ command.
+%\subsection{Margins in LaTeX}
+% 
+%Most of the margin problems come from figures positioned by hand using
+%\verb+\special+ or other commands. We suggest using the command
+%\verb+\includegraphics+
+%from the graphicx package. Always specify the figure width as a multiple of
+%the line width as in the example below using .eps graphics
+%\begin{verbatim}
+%   \usepackage[dvips]{graphicx} ... 
+%   \includegraphics[width=0.8\linewidth]{myfile.eps} 
+%\end{verbatim}
+%or % Apr 2009 addition
+%\begin{verbatim}
+%   \usepackage[pdftex]{graphicx} ... 
+%   \includegraphics[width=0.8\linewidth]{myfile.pdf} 
+%\end{verbatim}
+%for .pdf graphics. 
+%See section 4.4 in the graphics bundle documentation (http://www.ctan.org/tex-archive/macros/latex/required/graphics/grfguide.ps) 
+% 
+%A number of width problems arise when LaTeX cannot properly hyphenate a
+%line. Please give LaTeX hyphenation hints using the \verb+\-+ command.
 
 
 \subsubsection*{Acknowledgments}
