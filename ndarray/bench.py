@@ -5,6 +5,7 @@ import theano
 theano.config.floatX = 'float32'
 
 try:
+#    import theano.misc.pycuda_init# To allow selecting the gpu with THEANO_FLAGS
     import pycuda.autoinit
     from pycuda.compiler import SourceModule
     from pycuda.elementwise import ElementwiseKernel
@@ -105,9 +106,9 @@ def elemwise_helper(kern, vars):
                                [MyGpuNdArray(i) for i in vars.values()],
                                vars.values()[0].ndim)
 
-    def ndarray(gvars):
+    def ndarray(gvars, out=None):
         inputs = [gvars[k] for k in order]
-        return fct(inputs)
+        return fct(inputs, out=out)
 
     return ndarray
 
@@ -131,9 +132,10 @@ def pycuda_helper(kern, vars):
         kern = kern.replace(k, k+'[i]')
     kern = '__out[i] = '+kern
     ek = ElementwiseKernel('float *__out,' + ','.join("const float *%s"%(n,) for n in order), kern)
-    def pycuda(vars):
+    def pycuda(vars, out=None):
         inputs = [vars[k] for k in order]
-        out = gpuarray.empty_like(inputs[0])
+        if out is None or out.dtype != inputs[0].dtype or out.shape != inputs[0].shape:
+            out = gpuarray.empty_like(inputs[0])
         ek(out, *inputs)
         return out
     return pycuda
@@ -179,28 +181,36 @@ class bench(object):
         except Exception, e:
             print "numexpr: error", e
     
-    def try_compyte(self, vars, ref=None, retval=None):
+    def try_compyte(self, vars, ref=None, retval=None, reuse_output=False):
         try:
             gvars = dict((k, gpu_ndarray.GpuNdArrayObject(v)) for k,v in vars.iteritems())
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
             if ref is not None:
                 assert numpy.allclose(res, ref)
-            t = timeit(lambda: self.ndarray(gvars), "compyte ", nogc=False)
+            if reuse_output:
+                out = res
+            else:
+                out = None
+            t = timeit(lambda: self.ndarray(gvars, out), "compyte ", nogc=False)
             if retval is not None:
                 retval['compyte'] = t
             return t
         except Exception, e:
             print "compyte: error", e
 
-    def try_pycuda(self, vars, ref=None, retval=None):
+    def try_pycuda(self, vars, ref=None, retval=None, reuse_output=False):
         try:
             pvars = dict((k, gpuarray.to_gpu(v)) for k,v in vars.iteritems())
             res = self.pycuda(pvars)
             if ref is not None:
                 assert numpy.allclose(res.get(), ref)
             # pycuda can't handle no gc beyond about 10000 of calls
-            t = timeit(lambda: self.pycuda(pvars), "pycuda  ", nogc=False)
+            if reuse_output:
+                out = res
+            else:
+                out = None
+            t = timeit(lambda: self.pycuda(pvars, out), "pycuda  ", nogc=False)
             if retval is not None:
                 retval['pycuda'] = t
             return t
@@ -219,7 +229,7 @@ class bench(object):
         self.try_numexpr(vars, ref=ref, retval=retval)
         self.try_compyte(vars, ref=ref, retval=retval)
         self.try_pycuda(vars, ref=ref, retval=retval)
-        
+
         return retval
 
 def prod(seq):
@@ -236,6 +246,7 @@ def make_graph(name, b, msa):
     matplotlib.use('PDF') # maybe Agg or Cairo
     import matplotlib.pyplot as plt
 
+    print 'Start graph', name
     idx = 0
     for lbl, m, shapes in msa:
         vars = {}
@@ -265,14 +276,19 @@ b4 = bench("2*a + b**10", a=((100,),), b=((100,),))
 
 if __name__ == "__main__":
     msa = [('pycuda', bench.try_pycuda, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+           ('numpy 1d', bench.try_numpy, ((100,), (1000,), (10000,), (100000,), (1000000,))),#, (10000000,))),
            ('compyte 1d', bench.try_compyte, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-           ('compyte 2d', bench.try_compyte, ((10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000), (10000, 1000))),
-           ('compyte 3d', bench.try_compyte, ((10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10), (100, 100, 100), (1000, 100, 100))),
+           #('compyte 2d', bench.try_compyte, ((10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000), (10000, 1000)), None, None, True),
+           #('compyte 3d', bench.try_compyte, ((10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10), (100, 100, 100), (1000, 100, 100)), None, None, True),
            ('compyte 4d', bench.try_compyte, ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
+    msa2 = [('pycuda', lambda b, vals: bench.try_pycuda(b, vals, reuse_output=True), ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+           ('compyte 1d',  lambda b, vals: bench.try_compyte(b, vals, reuse_output=True),  ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+           ('compyte 4d', lambda b, vals: bench.try_compyte(b, vals, reuse_output=True), ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
 
-    make_graph('ap1', ap1, msa=msa)
-    make_graph('apb', apb, msa=msa)
-    make_graph('2ap3b', b2, msa=msa)
-    make_graph('a2pb2p2ab', b3, msa=msa)
-    make_graph('2apb10', b4, msa=msa)
-    make_graph('series', series, msa=msa)
+    for suffix, m in [('', msa),('_no_alloc', msa2)]:
+        make_graph('ap1'+suffix, ap1, msa=m)
+        make_graph('apb'+suffix, apb, msa=m)
+        make_graph('2ap3b'+suffix, b2, msa=m)
+        make_graph('a2pb2p2ab'+suffix, b3, msa=m)
+        make_graph('2apb10'+suffix, b4, msa=m)
+        make_graph('series'+suffix, series, msa=m)
