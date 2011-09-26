@@ -1,6 +1,9 @@
 \documentclass{article} % For LaTeX2e
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{nips11submit_e,times}
 \usepackage{natbib}
+\usepackage{amsmath}
 %\documentstyle[nips10submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -16,10 +19,10 @@ Universit\'e de Montr\'eal\\
 Montr\'eal, Canada \\
 \texttt{nouiz@nouiz.org} \\
 \And
-Coauthor \\
-Affiliation \\
-Address \\
-\texttt{email} \\
+Arnaud Bergeron \\
+Lisa Laboratory \\
+Université de Montréal \\
+\texttt{bergearn@iro.umontreal.ca} \\
 \AND
 Coauthor \\
 Affiliation \\
@@ -168,8 +171,13 @@ Current behavior not wanted
 
 \section{Existing Implementation}
 
-\subsection{Functinality}
+\subsection{Functionality}
 
+The current functionality is divided amongst language dependent parts and language independent parts.  What we call language dependent parts are what is tied to a specific GPU toolkit such as CUDA or OpenCL.  These functions take care of allocating memory on the GPU, making GPU-to-GPU copies and transferring data to and from host memory.  
+
+The language independent parts take care of indexing, making views, and provide an API that is very similar to numpy.  This is the part that supports any combination of dimensions and strides.  We are also working on a language independent way to do elementwise operation on these arrays that respect the shape and strides.
+
+Some parts remain to be done to reach our goal.
 
 fct implemented language dependent
 cuda
@@ -202,8 +210,15 @@ reduce dimensions collapsing
 \subsection{Files structure}
 File structure that allow using Cuda and PyOpenCL use the same code for some functionality.
 
-\section{Benchmark}
-\section{Futur Plan}
+\section{Benchmarks}
+
+In order to measure the overhead of multiple dimensions and strides (\emph{TODO: strides}) in comparison to existing implementations, we compared some elementwise kernels generated with PyCUDA to some generated using our algorithm.  The timings shown below do not include any transfer time or allocation of output array.  They were made on a \emph{<insert gpu type>}.
+
+INSERT GRAPHICS!!!
+
+These graphics show that ....
+
+\section{Future Plans}
 \section{Conclusion}
 
 
