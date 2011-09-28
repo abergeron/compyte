@@ -4,6 +4,7 @@
 \usepackage{nips11submit_e,times}
 \usepackage{natbib}
 \usepackage{amsmath}
+\usepackage{graphicx}
 %\documentstyle[nips10submit_09,times,art10]{article} % For LaTeX 2.09
 
 
@@ -209,22 +210,18 @@ Trust~\citep{Thrust} is a C++ template library. It provide a vector object for c
 We see clearly that none of those implementation offer what we want for a common gpu tensor. As Theano implementation support strides and that it is easier to add multiple dtype then to add strides support, we used many of its code as a base of our implementation. Theano also implemented some optimization to lower the performance loss of having more
 
 \section{Current implementation}
+
 Multiple backend:
 Current behavior not wanted
     * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
 
-\subsection{Elemwise dimensions collapsing}
-TODO
-
-\section{Existing Implementation}
-
 \subsection{Functionality}
 
-The current functionality is divided amongst language dependent parts and language independent parts.  What we call language dependent parts are what is tied to a specific GPU toolkit such as CUDA or OpenCL.  These functions take care of allocating memory on the GPU, making GPU-to-GPU copies and transferring data to and from host memory.  
+The current code can allocate arrays, transfer data to and from the CPU, create view of that data and run elementwise kernels on that data.  In order to support multiple APIs we have created a list of utility functions that are to be implemented for each API and the rest of the code is shared.
 
-The language independent parts take care of indexing, making views, and provide an API that is very similar to numpy.  This is the part that supports any combination of dimensions and strides.  We are also working on a language independent way to do elementwise operation on these arrays that respect the shape and strides.
+The language independent parts take care of indexing, making views, and provide an API that is very similar to numpy.  This is the part that supports any (valid) combination of dimensions and strides.  \emph{(mabye) Most importantly, the element-wise kernels and dimension collapsing optimizations are device-independent and can be reused between APIs.}
 
-Some parts remain to be done to reach our goal.
+We are still missing some items before we reach full numpy compatibility, most importantly setting a part of the array via assignation and reshaping.
 
 fct implemented language dependent
 cuda
@@ -254,22 +251,22 @@ dot22,gemm
 reduce along all dimensions, along one axis or a list of dimensions
 reduce dimensions collapsing
 
-\subsection{Files structure}
-File structure that allow using Cuda and PyOpenCL use the same code for some functionality.
+\subsection{Elemwise dimensions collapsing}
+TODO
 
 \section{Benchmarks}
 
-In order to measure the overhead of multiple dimensions and strides (\emph{TODO: strides}) in comparison to existing implementations, we compared some elementwise kernels generated with PyCUDA to some generated using our algorithm.  The timings shown below do not include any transfer time or allocation of output array.  They were made on a \emph{<insert gpu type>}.
+In order to measure the overhead of multiple dimensions and strides in comparison to existing implementations, we compared some elementwise kernels generated with PyCUDA to some generated using our algorithm (including dimension collapsing and strides data).  The timings shown below do not include any transfer time or allocation of output array.  They were made on a GTX 580.
 
-INSERT GRAPHICS!!!
+\includegraphics[width=0.5\textwidth]{ap1_no_alloc}
+\includegraphics[width=0.5\textwidth]{apb_no_alloc}
+\includegraphics[width=0.5\textwidth]{2ap3b_no_alloc}
+\includegraphics[width=0.5\textwidth]{a2pb2p2ab_no_alloc}
 
-These graphics show that ....
+We can conclude from these benchmarks that we have a bigger base cost that PyCUDA.  Although it is interesting to note that the strides code does not add any significant overhead to the computations.
 
 \section{Future Plans}
 \section{Conclusion}
-
-
-\section{Preparing PostScript or PDF files}
 
 %\subsection{Margins in LaTeX}
 % 
