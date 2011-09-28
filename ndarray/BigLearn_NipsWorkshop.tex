@@ -21,13 +21,13 @@ Montr\'eal, Canada \\
 \And
 Arnaud Bergeron \\
 Lisa Laboratory \\
-Université de Montréal \\
+Universit\'e de Montr\'eal \\
 \texttt{bergearn@iro.umontreal.ca} \\
 \AND
-Coauthor \\
-Affiliation \\
-Address \\
-\texttt{email} \\
+Yoshua Bengio \\
+D\'epartement d'Informatique et de Recherche Op\'erationelle \\
+Universit\'e de Montr\'eal \\
+\texttt{bengioy@iro.umontreal.ca} \\
 }
 
 % The \author macro works with any number of authors. There are two commands
@@ -49,11 +49,12 @@ Address \\
 \maketitle
 
 \begin{abstract}
-Currently there is multiple array/matrix/n-dimensional array
-object that exist on the gpu.  This hinder sharing gpu code and cause
+Currently there is multiple array/matrix/n-dimensional array object
+that exist on the gpu.  This hinder sharing gpu code and cause
 duplicate development work. This paper present a proposition and a
-first version~\citep{GpuNdArray} for a common gpu n-dimensional array(tensor) on the GPU. It will
-work on CUDA and OpenCL. It will be usable in python and C++.
+first version~\citep{GpuNdArray} for a common gpu n-dimensional
+array(tensor) on the GPU. It will work on CUDA and OpenCL. It will be
+usable in python, C++ and possibly others languages.
 \end{abstract}
 
 \section{Introduction}
@@ -62,23 +63,54 @@ CudaNdarray(Theano), GPUArray(pycuda) and CUDAMatrix(cudamat),
 GPUArray(pyopencl). There is also other implementation like Trust in
 C++.  The problem is that they are not compatible with each
 others. All of them have the caracteristic of being a subest of a
-tensor(n-dimensional array) that support strides like what Numpy
-implement on the CPU.  
+tensor(n-dimensional array) that support strides like what
+Numpy~\citep{numpy-2007} provides on the CPU.
 
-Strides are a way to have a view on some memory location that for
-example view only odd or even row of a matrix. More generally this
-allow to make a view on existing tensor memory space while the view
-see only some part of it. It accept as definition of part to take for
-each dimensions a range of elements with a step different then 1
-between each consecutive elements in the view.
+Strides are a way to specify the number of element to skip when going
+to the next element in a gived dimensions.  As an example, this allow
+to make a view that represent only odd, even, every third row, ... on
+a matrix. This avoid coping data and lower the memory usage and memory
+access. More generally this allow to make a view on existing tensor
+memory space while the view see only some part of it. A part can be
+specified for each dimensions and can be a range of elements with a
+step different then 1 between each consecutive elements in the
+view. We represent them as slice with a start(include) index, an
+end(excluded) index and a step.
+
 
 We think that one of the reason why there is so many differents bases
 objects is that on the gpu, implementing a general tensor with strides
 make coding for GPU even harder. This can be easily bypassed by using
 function to check/convert some condition on the memory layout. For
-example, if a developer want to only consider inputs in C or Fortran order
-for one function, he could just call a function on his inputs to convert the input
-into its choosed inputs layout.
+example, if a developer want to only consider inputs in C or Fortran
+order for one function, he could just call a function on his inputs to
+convert the input into its supported inputs layout.
+
+A second reason why people didn't implemented all those feature is
+that having more dimensions and having strides strides take more
+computation for indexing. This can lead the slower code. We will take
+as example the addition of 2 tensors of 10 dimensions. In serial code,
+having more dimensions just add more imbricated loop. If the inner
+loop is big enought, having more loopo on top probably won't make big
+different. In parallel code, this is not trivial to have indexing
+computation not significant for big number of dimensions. CUDA can
+provide only up to 5 implicit loop. So all extra dimensions request
+additional indexing computation. Also, if the size of those dimensions
+are not suited to the GPU, this can lead to lower performance.
+
+There is optimization possible for computating the indexing like
+collapsing some dimensions on the cpu and invisibly using a kernel
+that support less dimensions. The trick come from knowing witch
+dimensions you can collapse for witch function and inputs. This is
+implemented for elemwise operation as discussed in the ``Current
+implementation'' section.
+
+We think that if we provide such optimized function for elemwise and
+reduction operation, we will cover enough case where conversion from
+one memory layout to another can be combiend with computation. This
+can still impact the performance due to coalescing constrain, but we
+don't expect that to be significant most of the time.
+
 
 The lack of a common GPU tensor create many problems. Here is a few:
 \begin{itemize}
@@ -150,24 +182,39 @@ bottleneck in your code.
 
 \section{Existing Implementation}
 \subsection{Theano(CudaNdarray)}
-Theano~\citep{bergstra+al:2010-scipy}
-tensor with strides, float32 only, cuda only
+Theano is the more high level system that provide an implementation of a subset of a gpu tensor. From its web site Theano~\citep{bergstra+al:2010-scipy} is:
+``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''. The web site also high that it have a ``tight integration with numpy'', ``transparent use of GPU'', ``efficient symbolic differentiation'', ``speed and stability optimization'', ``dynamic C code generation'' and ``extensive unit-testing and self verification''.
+
+It implement a gpu tensor with strides, but support only float32 and CUDA. Also, the strides informations are stored differently then numpy. Theano store in with the number of element to skip to access the next element. Numpy store the number of bytes.
+
+We prefer to use the number of bytes as restricting ourself to number of element restrict us to tensor with homogenous data. We can't have the element be a struct of (float32,uint8), then take a view of only the float32 part. We currently don't support this, but we don't want to prevent us or someone else to add this in the futur.
+
 \subsection{PyCUDA/PyOpenCL(GPUArray)}
-PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009}.
-contiguous memory only, cuda or opencl only(similar interface)?
-can use both in the same programme. all dtype
-\subsection{cudamat(CUDAMat)}
-CUDAMat~\citep{cudamat-TR2009} cuda only, float32 only I think
+PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009} are python wrapper around CUDA and PyOpenCL respectively. In addition to wrapping their respective library, it do automatic Object clean up, it add a gpu array object and some abstraction for compilation. It also automatically transfort errors to python exceptions.
+
+There gpu array object are limited to contiguous memory region. It add a shape properties to allow using this contiguous memory region as n-dimensional array, but it don't work with strides. Both projects can be used together in the same python script. Also, it support many dtypes.
+
+\subsection{CUDAMat}
+The CUDAMat~\citep{cudamat-TR2009} web site describe well itself: ``The aim of the cudamat project is to make it easy to perform basic matrix calculations on CUDA-enabled GPUs from Python. cudamat provides a Python matrix class that performs calculations on a GPU.''
+
+So we clearly see that it support only CUDA and matrix. If we look deeper we see that it don't support strides and support only float32 datatype.
+
 \subsection{Gnumpy}
-Gnumpy~\citep{gnumpy-TR2010} on top of cudamat.
+Gnumpy~\citep{gnumpy-TR2010} is on top of cudamat. It add many functionality on the gpu. It allow to work with n-dimentional array when they are contiguous in memory. So no support for strides. It also add support for bollean type by using 1.0 and 0.0 in float32 to represent a boolean value.
+
 \subsection{Trust}
-Trust~\citep{Thrust} vector only. CUDA only, all dtype
+Trust~\citep{Thrust} is a C++ template library. It provide a vector object for cuda. It support all dtype, but no strides.
+
+\subsection{Summary}
+We see clearly that none of those implementation offer what we want for a common gpu tensor. As Theano implementation support strides and that it is easier to add multiple dtype then to add strides support, we used many of its code as a base of our implementation. Theano also implemented some optimization to lower the performance loss of having more
 
 \section{Current implementation}
 Multiple backend:
 Current behavior not wanted
     * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
 
+\subsection{Elemwise dimensions collapsing}
+TODO
 
 \section{Existing Implementation}
 
@@ -249,10 +296,8 @@ These graphics show that ....
 
 \subsubsection*{Acknowledgments}
 
-Use unnumbered third level headings for the acknowledgments. All
-acknowledgments go at the end of the paper. Do not include 
-acknowledgments in the anonymized submission, only in the 
-final paper. 
+We want to thanks James Bergstra. We used some of his code as the first version of some functionality currently implemented. I would also like to acklowledge Compute Canada, RQCHP, NSERC, and Canada Research Chairs for providing fonds or access to compute ressource.
+
 
 \bibliography{strings,strings-shorter,ml,aigaion-shorter}
 \bibliographystyle{plain}
