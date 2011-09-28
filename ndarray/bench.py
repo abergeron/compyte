@@ -205,7 +205,6 @@ class bench(object):
             res = self.pycuda(pvars)
             if ref is not None:
                 assert numpy.allclose(res.get(), ref)
-            # pycuda can't handle no gc beyond about 10000 of calls
             if reuse_output:
                 out = res
             else:
@@ -252,8 +251,12 @@ def make_graph(name, b, msa):
         vars = {}
         for k in b.vars.keys():
             vars[k] = shapes
-        xvals = [prod(shp) for shp in shapes]
-        yvals = [m(b, vals) for vals in var_iter(vars)]
+        xvals = []
+        yvals = []
+        for vals in var_iter(vars):
+            ref = b.numpy(**vals)
+            xvals.append(prod(vals.values()[0].shape))
+            yvals.append(m(b, vals, ref=ref))
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
@@ -281,9 +284,10 @@ if __name__ == "__main__":
            #('compyte 2d', bench.try_compyte, ((10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000), (10000, 1000)), None, None, True),
            #('compyte 3d', bench.try_compyte, ((10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10), (100, 100, 100), (1000, 100, 100)), None, None, True),
            ('compyte 4d', bench.try_compyte, ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
-    msa2 = [('pycuda', lambda b, vals: bench.try_pycuda(b, vals, reuse_output=True), ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-           ('compyte 1d',  lambda b, vals: bench.try_compyte(b, vals, reuse_output=True),  ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-           ('compyte 4d', lambda b, vals: bench.try_compyte(b, vals, reuse_output=True), ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
+    msa2 = [('pycuda', lambda b, vals, ref: b.try_pycuda(vals, reuse_output=True, ref=ref), ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+            ('compyte 1d',  lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),  ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
+            ('compyte 4d', lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref), ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10))),
+            ('compyte 4d strided', lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref), (((20, 2), (20, 2), (2, 2), (2, 2)), ((20, 2), (20, 2), (20, 2), (2, 2)), ((20, 2), (20, 2), (20, 2), (20, 2)), ((200, 2), (20, 2), (20, 2), (20, 2)), ((200, 2), (200, 2), (20, 2), (20, 2)), ((200, 2), (200, 2), (200, 2), (20, 2))))]
 
     for suffix, m in [('', msa),('_no_alloc', msa2)]:
         make_graph('ap1'+suffix, ap1, msa=m)
