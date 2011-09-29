@@ -5,30 +5,19 @@
 \usepackage{natbib}
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{verbatim}
 %\documentstyle[nips10submit_09,times,art10]{article} % For LaTeX 2.09
 
 
-\title{A Common GPU N dimensions array}
+\title{A Common GPU n-dimensions array}
 
 
 \author{
-Frédéric Bastien\thanks{ Use footnote for providing further information
-about author (webpage, alternative address)---\emph{not} for acknowledging
-funding agencies.} \\
-D\'epartement d'Informatique et de Recherche Op\'erationelle\\
+Frédéric Bastien, Arnaud Bergeron, Yoshua Bengio and Pascal Vincent \\
+D\'epartement d'Informatique et de Recherche Op\'erationnelle\\
 Universit\'e de Montr\'eal\\
 Montr\'eal, Canada \\
-\texttt{nouiz@nouiz.org} \\
-\And
-Arnaud Bergeron \\
-Lisa Laboratory \\
-Universit\'e de Montr\'eal \\
-\texttt{bergearn@iro.umontreal.ca} \\
-\AND
-Yoshua Bengio \\
-D\'epartement d'Informatique et de Recherche Op\'erationelle \\
-Universit\'e de Montr\'eal \\
-\texttt{bengioy@iro.umontreal.ca} \\
+\texttt{\{bastienf, bergearn, bengioy, vincentp\}@iro.umontreal.ca} \\
 }
 
 % The \author macro works with any number of authors. There are two commands
@@ -50,69 +39,66 @@ Universit\'e de Montr\'eal \\
 \maketitle
 
 \begin{abstract}
-Currently there is multiple array/matrix/n-dimensional array object
-that exist on the gpu.  This hinder sharing gpu code and cause
+Currently there are multiple array/matrix/n-dimensional objects
+that exist on the GPU.  This hinders sharing of GPU code and cause
 duplicate development work. This paper present a proposition and a
-first version~\citep{GpuNdArray} for a common gpu n-dimensional
-array(tensor) on the GPU. It will work on CUDA and OpenCL. It will be
+first version~\citep{GpuNdArray} for a common GPU n-dimensional
+array(tensor). It will work with CUDA and OpenCL. It will be
 usable in python, C++ and possibly others languages.
 \end{abstract}
 
 \section{Introduction}
-Currently there is at least 4 differents gpu array in python:
-CudaNdarray(Theano), GPUArray(pycuda) and CUDAMatrix(cudamat),
-GPUArray(pyopencl). There is also other implementation like Trust in
+Currently there is at least 4 different GPU array in python:
+CudaNdarray(Theano), GPUArray(PyCUDA) and CUDAMatrix(cudamat),
+GPUArray(PyOpenCL). There are also other implementations like Trust in
 C++.  The problem is that they are not compatible with each
-others. All of them have the caracteristic of being a subest of a
+others. All of them have the characteristic of being a subset of a
 tensor(n-dimensional array) that support strides like what
 Numpy~\citep{numpy-2007} provides on the CPU.
 
 Strides are a way to specify the number of element to skip when going
-to the next element in a gived dimensions.  As an example, this allow
+to the next element in a given dimension.  As an example, this allows
 to make a view that represent only odd, even, every third row, ... on
-a matrix. This avoid coping data and lower the memory usage and memory
+a matrix. This avoids coping data and lowers the memory usage and memory
 access. More generally this allow to make a view on existing tensor
-memory space while the view see only some part of it. A part can be
+memory space while the view sees only some part of it. A part can be
 specified for each dimensions and can be a range of elements with a
 step different then 1 between each consecutive elements in the
-view. We represent them as slice with a start(include) index, an
+view. We represent them as slice with a start(included) index, an
 end(excluded) index and a step.
 
+We think that one of the reasons why there are so many different base
+objects is that implementing a general tensor with strides
+make coding for the GPU even harder. This can be easily bypassed by using
+a function to check and convert if necessary to a known memory layout.
+As an example, if a developer only wants to consider inputs in C order for one function, he could just call a function on his inputs to
+convert each one into its supported layout.
 
-We think that one of the reason why there is so many differents bases
-objects is that on the gpu, implementing a general tensor with strides
-make coding for GPU even harder. This can be easily bypassed by using
-function to check/convert some condition on the memory layout. For
-example, if a developer want to only consider inputs in C or Fortran
-order for one function, he could just call a function on his inputs to
-convert the input into its supported inputs layout.
-
-A second reason why people didn't implemented all those feature is
+A second reason why people didn't implement all those features is
 that having more dimensions and having strides strides take more
-computation for indexing. This can lead the slower code. We will take
+computation for indexing. This can lead to slower code. We will take
 as example the addition of 2 tensors of 10 dimensions. In serial code,
-having more dimensions just add more imbricated loop. If the inner
-loop is big enought, having more loopo on top probably won't make big
-different. In parallel code, this is not trivial to have indexing
-computation not significant for big number of dimensions. CUDA can
-provide only up to 5 implicit loop. So all extra dimensions request
+having more dimensions just adds more imbricated loops. If the inner
+loop is big enough, having more loops on top probably won't make a big
+difference. In parallel code, it is much harder to make the indexing computations not overshadow the actual computations. CUDA can
+provide only up to 5 implicit loops. So all extra dimensions require
 additional indexing computation. Also, if the size of those dimensions
 are not suited to the GPU, this can lead to lower performance.
 
-There is optimization possible for computating the indexing like
+There are optimizations possible for computing the indexing like
 collapsing some dimensions on the cpu and invisibly using a kernel
-that support less dimensions. The trick come from knowing witch
-dimensions you can collapse for witch function and inputs. This is
-implemented for elemwise operation as discussed in the ``Current
+that support less dimensions. The trick come from knowing which 
+dimensions you can collapse for which function and inputs. This is
+implemented for elemwise operations as discussed in the ``Current
 implementation'' section.
 
-We think that if we provide such optimized function for elemwise and
-reduction operation, we will cover enough case where conversion from
-one memory layout to another can be combiend with computation. This
-can still impact the performance due to coalescing constrain, but we
+We think that if we provide such optimized functions for elemwise and
+reduction operations, we will cover enough cases where the conversion from
+one memory layout to another can be combined with the computation. This
+can still impact the performance due to coalescing constraints, but we
 don't expect that to be significant most of the time.
 
-
+\begin{comment}
 The lack of a common GPU tensor create many problems. Here is a few:
 \begin{itemize}
   \item Duplicate work
@@ -123,8 +109,9 @@ The lack of a common GPU tensor create many problems. Here is a few:
 
 All those problem are agravated by the fact that GPU code is
 harder/slower to do correctly and fast than serial CPU code.
+\end{comment}
 
-\subsection{Pitfall to Avoid}
+\subsection{Pitfalls to Avoid}
 \begin{itemize}
 \item Start alone
   \begin{itemize}
@@ -138,7 +125,7 @@ harder/slower to do correctly and fast than serial CPU code.
 \end{itemize}
 
 \subsection{Goal/Strategy}
-The goal is to have a common GPU object that will be used by every body. We think that the best strategy is:
+The goal is to have a common GPU object that will be used by everybody. We think that the best strategy is:
 
 \begin{itemize}
 \item Make a n dimensionals array on the gpu that support strides
@@ -154,66 +141,62 @@ The goal is to have a common GPU object that will be used by every body. We thin
 \end{itemize}
 
 
-We think that for a common GPU object, we need an n dimensionals
+We think that for a common GPU object, we need an n-dimensional
 array. This is motivated that forcing user to use an object that
-support only 1 or 2 dimensions add complexity to the user when he need
-to deal with algorithms that have natively more then 2 dimensions. We
-don't think that this complexity should be deal by each users for each
-such problems. Having a base object that support n-dimensions, remove
-this coding complexity from the user point of view.
+support only 1 or 2 dimensions adds complexity when dealing with algorithms that have natively more than 2 dimensions.
+We don't think that this complexity should be dealt with by each user and 
+having a base object that supports n-dimensions, removes
+this complexity.
 
 From the developer point of view, sometimes it is worth to support
-strided tensor as inputs. But this is not the case. We don't think
-that asking the developers that choose to don't support n-dimensionals
-inputs to call a function to assert/convert the inputs memory layout
-is something too complicated or time consuming. Especially when those
-functions are provided and compared again reimplementing its own objects.
+strides in inputs and sometimes not.  In the case where the developer does not want to support strides, we don't think
+that calling a function to assert/convert the inputs to the desired layout is something too complicated or time consuming.
+Especially when those functions are provided.
 
-Many times, the inputs layout choosed by the developer of a function
+Many times, the inputs layout chosen by the developer of a function
 will lead to better memory access pattern then a random memory
 layout. So this is not trivial to say that generalizing the
 implementation to support general memory layout will lead to
-significant performance gain. If someone else want to use this
-implementation without having this memory layout conversion, he could
-genearalize it himself. But having a working implementaiton is really
-useful to get started and help in the frequent case where this is not a
-bottleneck in your code.
-
-
+significant performance gain. 
 
 \section{Existing Implementation}
 \subsection{Theano(CudaNdarray)}
-Theano is the more high level system that provide an implementation of a subset of a gpu tensor. From its web site Theano~\citep{bergstra+al:2010-scipy} is:
-``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''. The web site also high that it have a ``tight integration with numpy'', ``transparent use of GPU'', ``efficient symbolic differentiation'', ``speed and stability optimization'', ``dynamic C code generation'' and ``extensive unit-testing and self verification''.
+Theano is the system that provides the closest approximation of a GPU tensor. From its web site Theano~\citep{bergstra+al:2010-scipy} is:
+``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''. The web site also cites that it has a ``tight integration with numpy'', ``transparent use of GPU'', ``efficient symbolic differentiation'', ``speed and stability optimization'', ``dynamic C code generation'' and ``extensive unit-testing and self verification''.
 
-It implement a gpu tensor with strides, but support only float32 and CUDA. Also, the strides informations are stored differently then numpy. Theano store in with the number of element to skip to access the next element. Numpy store the number of bytes.
+It implement a GPU tensor with strides, but supports only single precision floating point and CUDA. Also, the strides informations are stored differently than numpy. Theano stores in with the number of elements to skip to access the next element. Numpy stores the number of bytes to skip.
 
-We prefer to use the number of bytes as restricting ourself to number of element restrict us to tensor with homogenous data. We can't have the element be a struct of (float32,uint8), then take a view of only the float32 part. We currently don't support this, but we don't want to prevent us or someone else to add this in the futur.
+We prefer to use the number of bytes as restricting ourself to number of element restrict us to tensor with homogenous data. We can't have the element be a struct of (float32,uint8), then take a view of only the float32 part. We currently don't support this, but we don't want to prevent us or someone else to add this in the future.
 
 \subsection{PyCUDA/PyOpenCL(GPUArray)}
-PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009} are python wrapper around CUDA and PyOpenCL respectively. In addition to wrapping their respective library, it do automatic Object clean up, it add a gpu array object and some abstraction for compilation. It also automatically transfort errors to python exceptions.
+PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009} are python wrappers around CUDA and OpenCL respectively. In addition to wrapping their respective library, they do automatic memory management, add a GPUarray object and some abstraction for compilation. They also automatically translates errors to python exceptions.
 
-There gpu array object are limited to contiguous memory region. It add a shape properties to allow using this contiguous memory region as n-dimensional array, but it don't work with strides. Both projects can be used together in the same python script. Also, it support many dtypes.
+There GPU array objects are limited to contiguous memory regions. They add shape properties to allow using this contiguous memory region as n-dimensional array, but they don't work with strides. Both projects can be used together in the same python script. Also, they support many types.
 
 \subsection{CUDAMat}
-The CUDAMat~\citep{cudamat-TR2009} web site describe well itself: ``The aim of the cudamat project is to make it easy to perform basic matrix calculations on CUDA-enabled GPUs from Python. cudamat provides a Python matrix class that performs calculations on a GPU.''
+The CUDAMat~\citep{cudamat-TR2009} web site describes itself with: ``The aim of the cudamat project is to make it easy to perform basic matrix calculations on CUDA-enabled GPUs from Python. cudamat provides a Python matrix class that performs calculations on a GPU.''
 
-So we clearly see that it support only CUDA and matrix. If we look deeper we see that it don't support strides and support only float32 datatype.
+So we clearly see that it support only CUDA and matrix. If we look deeper we see that it don't support strides and support only single precision floating point.
 
 \subsection{Gnumpy}
-Gnumpy~\citep{gnumpy-TR2010} is on top of cudamat. It add many functionality on the gpu. It allow to work with n-dimentional array when they are contiguous in memory. So no support for strides. It also add support for bollean type by using 1.0 and 0.0 in float32 to represent a boolean value.
+Gnumpy~\citep{gnumpy-TR2010} is on top of cudamat. It adds much functionality on the gpu. It allows to work with n-dimensional arrays when they are contiguous in memory. So no support for strides. It also add support for the boolean type by using 1.0 and 0.0 in floating point to represent true and false, respectively.
 
 \subsection{Trust}
-Trust~\citep{Thrust} is a C++ template library. It provide a vector object for cuda. It support all dtype, but no strides.
+Trust~\citep{Thrust} is a C++ template library. It provides a vector object for cuda. It supports all types, but no strides.
 
 \subsection{Summary}
-We see clearly that none of those implementation offer what we want for a common gpu tensor. As Theano implementation support strides and that it is easier to add multiple dtype then to add strides support, we used many of its code as a base of our implementation. Theano also implemented some optimization to lower the performance loss of having more
+We see clearly that none of those implementations offer what we want for a common GPU tensor. As the Theano implementation support strides and that it is easier to add other types than to add strides support, we used much of its code as a base for our implementation. Theano also implemented some optimizations to lower the performance loss of having more dimensions
 
 \section{Current implementation}
 
+We currently have all the code implemented and working for CUDA.  
+OpenCL is partially implemented and some adjustments remain to be done.  
+
+\begin{comment}
 Multiple backend:
 Current behavior not wanted
     * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
+\end{comment}
 
 \subsection{Functionality}
 
@@ -223,6 +206,7 @@ The language independent parts take care of indexing, making views, and provide 
 
 We are still missing some items before we reach full numpy compatibility, most importantly setting a part of the array via assignation and reshaping.
 
+\begin{comment}
 fct implemented language dependent
 cuda
 malloc/free
@@ -250,20 +234,24 @@ n dimensional tranpose
 dot22,gemm
 reduce along all dimensions, along one axis or a list of dimensions
 reduce dimensions collapsing
+\end{comment}
 
 \subsection{Elemwise dimensions collapsing}
 TODO
 
 \section{Benchmarks}
 
-In order to measure the overhead of multiple dimensions and strides in comparison to existing implementations, we compared some elementwise kernels generated with PyCUDA to some generated using our algorithm (including dimension collapsing and strides data).  The timings shown below do not include any transfer time or allocation of output array.  They were made on a GTX 580.
+In order to measure the overhead of multiple dimensions and strides in comparison to existing implementations, we compared some elementwise kernels generated with PyCUDA to some generated using our algorithm (including dimension collapsing and strides data).
+The timings shown below do not include any transfer time or allocation of output array.
+They were made on a GeForce GTX 580.
 
 \includegraphics[width=0.5\textwidth]{ap1_no_alloc}
 \includegraphics[width=0.5\textwidth]{apb_no_alloc}
 \includegraphics[width=0.5\textwidth]{2ap3b_no_alloc}
 \includegraphics[width=0.5\textwidth]{a2pb2p2ab_no_alloc}
 
-We can conclude from these benchmarks that we have a bigger base cost that PyCUDA.  Although it is interesting to note that the strides code does not add any significant overhead to the computations.
+We can conclude from these benchmarks that we have a bigger base cost that PyCUDA.
+Although it is interesting to note that the strides code does not add any significant overhead to the computations.
 
 \section{Future Plans}
 \section{Conclusion}
