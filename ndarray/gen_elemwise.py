@@ -1207,8 +1207,15 @@ def call_elemwise(fct, input_vals, block=None, grid=None, out=None,
         if block_*grid_<out_size:
             block_ = min(out_size/grid_, 512)
 
-    d = {"block":(block_,1,1), "grid":(grid_,1)}
-    fct(*args, **d)
+    # We bypass the pycuda wrapper gpu function call.
+    # by calling directly the gpu function.
+    # This is faster and lower the overhead.
+    # Here is code that allow you to use the pycuda fct call.
+    # d = {"block":(block_,1,1), "grid":(grid_,1)}
+    # fct(*args, **d)
+    fct.set_block_shape(block_,1,1)#time_kernel
+    fct.param_set(*args)
+    fct.launch_grid(grid_,1)
     return out
 
 class MyGpuNdArray():
@@ -1263,7 +1270,9 @@ class MyGpuNdArray():
             if collapse:
                 # Do the collapsing.
                 nd_col, info = elemwise_collapses(list(inputs),[out])
-
+                # The two next line are usefull to force a call to the c contiguous version
+                #nd_col = 0
+                #info = [[],[]]
                 out = call_elemwise(fcts[nd_col], inputs,
                                     out=out, out_shape=info[0][:nd_col],
                                     strides=info[1])
