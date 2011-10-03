@@ -174,20 +174,17 @@ It implement a GPU tensor with strides and broadcasting, but supports only singl
 We prefer to use the number of bytes as restricting ourself to number of element restrict us to tensor with homogenous data. We can't have the element be a struct of (float32,uint8), then take a view of only the float32 part. We currently don't support this, but we don't want to prevent us or someone else to add this in the future.
 
 \subsection{PyCUDA/PyOpenCL(GPUArray)}
-TODO: support broadcasting?
 PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009} are python wrappers around CUDA and OpenCL respectively. In addition to wrapping their respective library, they do automatic memory management, add a GPUarray object and some abstraction for compilation. They also automatically translates errors to python exceptions.
 
-There GPU array objects are limited to contiguous memory regions. They add shape properties to allow using this contiguous memory region as n-dimensional array, but they don't work with strides. Both projects can be used together in the same python script. Also, they support many types.
+There GPU array objects are limited to contiguous memory regions. They add shape properties to allow using this contiguous memory region as n-dimensional array, but they don't work with strides. Both projects can be used together in the same python script. Also, they don't support broadcasting, but they support many data types.
 
 \subsection{CUDAMat}
-TODO: support broadcasting?
 The CUDAMat~\citep{cudamat-TR2009} web site describes itself with: ``The aim of the cudamat project is to make it easy to perform basic matrix calculations on CUDA-enabled GPUs from Python. cudamat provides a Python matrix class that performs calculations on a GPU.''
 
-So we clearly see that it support only CUDA and matrix. If we look deeper we see that it don't support strides and support only single precision floating point.
+So we clearly see that it support only CUDA and matrix. If we look deeper we see that it don't support strides and support only single precision floating point. Broadcasting is supported via function and not via numpy syntax.
 
 \subsection{Gnumpy}
-TODO: support broadcasting?
-Gnumpy~\citep{gnumpy-TR2010} is on top of cudamat. It adds much functionality on the gpu. It allows to work with n-dimensional arrays when they are contiguous in memory. So no support for strides. It also add support for the boolean type by using 1.0 and 0.0 in floating point to represent true and false, respectively.
+Gnumpy~\citep{gnumpy-TR2010} is on top of cudamat. It adds much functionality on the gpu. It allows to work with n-dimensional arrays when they are contiguous in memory. So no support for strides. It also add support for the boolean type by using 1.0 and 0.0 in floating point to represent true and false, respectively. It also support broadcasting via numpy syntax.
 
 \subsection{Trust}
 Trust~\citep{Thrust} is a C++ template library. It provides a vector object for cuda. It supports all types, but no strides. Also, as it support only 1 dimensional object, there is no meaning of broadcasting.
