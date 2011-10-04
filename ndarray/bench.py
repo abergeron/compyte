@@ -241,10 +241,10 @@ MARKERS = ['+', '*', ',', '.', '1', '2', '3', '4', '<', '>', 'D', 'H', '^', '_',
 COLORS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
 def make_graph(name, b, msa):
+    ext = 'pdf'
     import matplotlib
-    matplotlib.use('PDF') # maybe Agg or Cairo
+    matplotlib.use(ext, warn=False) # maybe Agg or Cairo
     import matplotlib.pyplot as plt
-
     print 'Start graph', name
     idx = 0
     for lbl, m, shapes in msa:
@@ -256,12 +256,15 @@ def make_graph(name, b, msa):
         for vals in var_iter(vars):
             ref = b.numpy(**vals)
             xvals.append(prod(vals.values()[0].shape))
-            yvals.append(m(b, vals, ref=ref))
+            yvals.append(m(b, vals, ref=ref)*1e6)
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
     plt.legend(loc='upper left')
-    plt.savefig(name+'.pdf')
+    plt.ylabel('time (us)')
+    plt.xlabel('number of elements')
+    plt.title(b.exp)
+    plt.savefig(name+'.'+ext)
     plt.cla()
     plt.clf()
 
