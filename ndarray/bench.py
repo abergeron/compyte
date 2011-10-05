@@ -179,6 +179,8 @@ class bench(object):
                 retval['numexpr'] = t
             return t
         except Exception, e:
+            print "pycuda: error", e
+            import traceback
             print "numexpr: error", e
     
     def try_compyte(self, vars, ref=None, retval=None, reuse_output=False):
@@ -197,6 +199,8 @@ class bench(object):
                 retval['compyte'] = t
             return t
         except Exception, e:
+            print "pycuda: error", e
+            import traceback
             print "compyte: error", e
 
     def try_pycuda(self, vars, ref=None, retval=None, reuse_output=False):
@@ -264,12 +268,12 @@ def make_graph(name, b, msa):
     plt.ylabel('time (us)')
     plt.xlabel('number of elements')
     plt.title(b.exp)
-    plt.savefig(name+'.'+ext)
+    filename = name+'.'+ext
+    plt.savefig(filename)
+    print "saved in file", filename
     plt.cla()
     plt.clf()
 
-series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)",
-               a=((100,), (1000,), (100, 200)))
 #Too much mem on oolong: (1e6,), (1e8)))
 #shapes = ((100,), (100000,), (100,1000), (100,100,10),(100,10,10,10))
 #shapes = ((100,10,10,10),)
