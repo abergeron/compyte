@@ -47,6 +47,7 @@ def timeit(f, lbl, n_tries=3, nogc=True):
         gc.collect()
     est = te - ts
 
+    # This will generate a runtime between 1 and 10 seconds
     loops = max(1, int(10**math.floor(math.log(10/est, 10))))
     
     mintime = min(timeit_core(f, loops, nogc) for _ in xrange(n_tries))
@@ -112,17 +113,21 @@ def elemwise_helper(kern, vars):
 
     return ndarray
 
-def shape_iter(key, shapes):
-    for s in shapes:
-        shape = [v[0] if isinstance(v, (list, tuple)) else v for v in s]
-        stride = [v[1] if isinstance(v, (list, tuple)) else 1 for v in s]
-        val = numpy.random.random(shape).astype('float32')
-        val = val[tuple(slice(None, None, st) for st in stride)]
-        yield key, val
-
 def var_iter(vars):
-    for v in zip(*[shape_iter(k, v) for k, v in vars.iteritems()]):
-        yield dict(v)
+    """ return the initial value for the inputs.
+    
+    This is done this way to ensure we keep only the mininum memory footprint.
+    """
+    keys_order = vars.keys()
+    for shape_idx in range(len(vars.items()[0][1])):
+        ret = {}
+        for key in vars.keys():
+            shape = [v[0] if isinstance(v, (list, tuple)) else v for v in vars[key][shape_idx]]
+            stride = [v[1] if isinstance(v, (list, tuple)) else 1 for v in vars[key][shape_idx]]
+
+            val = numpy.random.random(shape).astype('float32')
+            ret[key] = val[tuple(slice(None, None, st) for st in stride)]
+        yield ret
 
 def pycuda_helper(kern, vars):
     # this does float32 only
