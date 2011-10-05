@@ -205,6 +205,8 @@ class bench(object):
             return t
         except Exception, e:
             print "compyte: error", e
+            import traceback
+            traceback.print_exc()
 
     def try_pycuda(self, vars, ref=None, retval=None, reuse_output=False):
         try:
@@ -288,6 +290,8 @@ apb = bench("a+b", a=shapes, b=shapes)
 b2 = bench("2*a + 3*b", a=((100,),), b=((100,),))
 b3 = bench("a**2 + b**2 + 2*a*b", a=((100,),), b=((100,),))
 b4 = bench("2*a + b**10", a=((100,),), b=((100,),))
+series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)",
+               a=((100,), (1000,), (100, 200)))
 
 if __name__ == "__main__":
     msa = [('pycuda', bench.try_pycuda, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
