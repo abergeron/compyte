@@ -179,10 +179,10 @@ class bench(object):
                 retval['numexpr'] = t
             return t
         except Exception, e:
-            print "pycuda: error", e
-            import traceback
             print "numexpr: error", e
-    
+            import traceback
+            traceback.print_exc()
+
     def try_compyte(self, vars, ref=None, retval=None, reuse_output=False):
         try:
             gvars = dict((k, gpu_ndarray.GpuNdArrayObject(v)) for k,v in vars.iteritems())
@@ -199,8 +199,6 @@ class bench(object):
                 retval['compyte'] = t
             return t
         except Exception, e:
-            print "pycuda: error", e
-            import traceback
             print "compyte: error", e
 
     def try_pycuda(self, vars, ref=None, retval=None, reuse_output=False):
@@ -257,8 +255,10 @@ def make_graph(name, b, msa):
             vars[k] = shapes
         xvals = []
         yvals = []
+        print lbl
         for vals in var_iter(vars):
-            ref = b.numpy(**vals)
+            #ref = b.numpy(**vals)
+            ref = None
             xvals.append(prod(vals.values()[0].shape))
             yvals.append(m(b, vals, ref=ref)*1e6)
         plt.semilogx(xvals, yvals, label=lbl,
