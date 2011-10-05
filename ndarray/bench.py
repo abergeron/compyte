@@ -126,7 +126,7 @@ def var_iter(vars):
             stride = [v[1] if isinstance(v, (list, tuple)) else 1 for v in vars[key][shape_idx]]
 
             val = numpy.random.random(shape).astype('float32')
-            ret[key] = val[tuple(slice(None, None, st) for st in stride)]
+            ret[key] = val, stride
         yield ret
 
 def pycuda_helper(kern, vars):
@@ -144,6 +144,13 @@ def pycuda_helper(kern, vars):
         ek(out, *inputs)
         return out
     return pycuda
+
+
+def apply_strides(vars):
+    vars2 = {}
+    for k, (val, stride) in vars.iteritems():
+        vars2[k] = val[tuple(slice(None, None, st) for st in stride)]
+    return vars2
 
 class bench(object):
     def __init__(self, exp, **vars):
@@ -168,6 +175,7 @@ class bench(object):
         return res
 
     def try_numpy(self, vars, retval=None):
+        vars = apply_strides(vars)
         t = timeit(lambda: self.numpy(**vars), "numpy   ")
         if retval is not None:
             retval['numpy'] = t
@@ -176,8 +184,9 @@ class bench(object):
     def try_numexpr(self, vars, ref=None, retval=None):
         # to cache the expression, since we don't want to time the compile
         try:
-            res = self.numexpr(vars)
+            vars = apply_strides(vars)
             if ref is not None:
+                res = self.numexpr(vars)
                 assert (res == ref).all()
             t = timeit(lambda: self.numexpr(vars), "numexpr ")
             if retval is not None:
@@ -190,7 +199,11 @@ class bench(object):
 
     def try_compyte(self, vars, ref=None, retval=None, reuse_output=False):
         try:
-            gvars = dict((k, gpu_ndarray.GpuNdArrayObject(v)) for k,v in vars.iteritems())
+            # Take care! gpu_ndarray.GpuNdArrayObject will always generate a c contiguous
+            # memory region! This bypass the strides tests!
+            gvars = dict((k, (gpu_ndarray.GpuNdArrayObject(v), st))
+                         for k,(v,st) in vars.iteritems())
+            gvars = apply_strides(gvars)
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
             if ref is not None:
@@ -210,7 +223,8 @@ class bench(object):
 
     def try_pycuda(self, vars, ref=None, retval=None, reuse_output=False):
         try:
-            pvars = dict((k, gpuarray.to_gpu(v)) for k,v in vars.iteritems())
+            assert (numpy.asarray([st for k,(v,st) in vars.iteritems()])==1).all()
+            pvars = dict((k, gpuarray.to_gpu(v)) for k,(v,st) in vars.iteritems())
             res = self.pycuda(pvars)
             if ref is not None:
                 assert numpy.allclose(res.get(), ref)
@@ -266,12 +280,12 @@ def make_graph(name, b, msa, times={}):
         if lbl in times:
             assert len(times[lbl]) == len(shapes)
             yvals = numpy.asarray(times[lbl])*1e6
-        for vals in var_iter(vars):
-            xvals.append(prod(vals.values()[0].shape))
+        for vals_strides in var_iter(vars):
+            xvals.append(prod(vals_strides.values()[0][0].shape))
             if lbl not in times:
                 #ref = b.numpy(**vals)
                 ref = None
-                yvals.append(m(b, vals, ref=ref)*1e6)
+                yvals.append(m(b, vals_strides, ref=ref)*1e6)
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
