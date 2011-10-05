@@ -174,10 +174,10 @@ So we clearly see that it support only CUDA and matrix. If we look deeper we see
 Gnumpy~\citep{gnumpy-TR2010} is built on top of cudamat. It allows to work with n-dimensional arrays when they are contiguous in memory. So, no support for strides. It also adds support for the boolean type by using 1.0 and 0.0 in floating point to represent true and false, respectively. It also supports broadcasting via numpy syntax.
 
 \subsection{Trust}
-Trust~\citep{Thrust} is a C++ template library. It provides a vector object for CUDA. It supports all data types.  Also, as it supports only 1 dimension, there are no means of broadcasting nor strides.
+Trust~\citep{Thrust} is a C++ template library. It provides a vector object for cuda. It supports all data types.  Also, as it supports only 1 dimension, there are no means of broadcasting nor strides.
 
 \subsection{Summary}
-We see clearly that none of those implementations offer all of what we want for a common GPU tensor. As the Theano implementation supports strides and that it is easier to add other types than to add strides support, we used much of its code as a starting point for our implementation, even if we have to change the strides model to use the number of bytes to skip rather than the number of elements.  This will allow working with non-homogenous data such as structs of (float32,uint8) and providing views of individual elements. Theano also implemented some optimizations to lower the performance loss of having more dimensions.
+We see clearly that none of those implementations offer all of what we want for a common GPU tensor. As the Theano implementation supports strides and that it is easier to add other types than to add strides support, we used much of its code as a starting point for our implementation. Theano also implemented some optimizations to lower the performance loss of having more dimensions.
 
 \section{Current implementation}
 
@@ -244,8 +244,8 @@ The timings shown below do not include any transfer time or allocation of output
 They were made on a GeForce GTX 580.
 
 \includegraphics[width=0.5\textwidth]{ap1_no_alloc}
-\includegraphics[width=0.5\textwidth]{apb_no_alloc}
-\includegraphics[width=0.5\textwidth]{2ap3b_no_alloc}
+%%\includegraphics[width=0.5\textwidth]{apb_no_alloc}
+%%\includegraphics[width=0.5\textwidth]{2ap3b_no_alloc}
 \includegraphics[width=0.5\textwidth]{a2pb2p2ab_no_alloc}
 
 We can conclude from these benchmarks that we have a bigger base cost that PyCUDA.
