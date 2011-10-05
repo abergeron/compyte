@@ -48,52 +48,80 @@ It will be usable in python, C++ and possibly others languages.
 \end{abstract}
 
 \section{Introduction}
-Currently there are at least 4 different GPU array implementations in python:
-CudaNdarray(Theano), GPUArray(PyCUDA) and CUDAMatrix(cudamat), % TODO: il serait bien d'avoir des citaitons
-GPUArray(PyOpenCL). There are also other implementations like Trust in
-C++. One problem is that they are incompatible with each
-other. Each of them implements a different subset of the features that 
-Numpy~\citep{numpy-2007} provides on the CPU, namely a tensor object (arbitrary-dimensional array) with support for \emph{strides} and \emph{broadcasting}.
-Some implementations support only vectors or matrices, some support only \emph{float32}, only contiguous memory layout, etc$\ldots$
-None of them targets both CUDA and OpenCL.
-
-\emph{Strides} are a way to specify the number of elements to skip when going
-to the next element in a given dimension. As an example, this allows
+Currently there are at least 4 different GPU array implementations in
+python: CudaNdarray(Theano)~\citep{bergstra+al:2010-scipy},
+GPUArray(PyCUDA)~\citep{kloeckner_pycuda_2009},
+GPUArray(PyOpenCL)~\citep{kloeckner_pycuda_2009} and
+CUDAMatrix(cudamat)~\citep{cudamat-TR2009}. There are also other
+implementations like Trust~\citep{Thrust} in C++. One problem is that they are
+incompatible with each other. Each of them implements a different
+subset of the features that Numpy~\citep{numpy-2007} provides on the
+CPU, namely a tensor object (arbitrary-dimensional array) with support
+for \emph{strides}~\footnote{
+\emph{Strides} are a way to specify for each dimensions in an an n-dimentional object a subrange and the number of elements to skip when going
+to the next element. E.g. This allows
 to operate on a view that represents only odd, even, every third row, etc$\ldots$ of
 a matrix. This avoids copying data and lowers the memory usage and memory
-access. More generally it allows to operate on a view that sees only some part of an existing tensor
-memory space. A part can be
-specified for each dimension as a range of elements, possibly with a
-step different than 1 between each consecutive elements in the
-view. We will represent them as a slice with a start(included) index, an
+access. The part to view in each dimensions is specified as a range of elements, with a
+step between each elements. This is represented with slice with a start(included) index, an
 end(excluded) index and a step.
-
+}
+ and \emph{broadcasting}~\footnote{
 \emph{Broadcasting} is a generalization on tensors of the convention and mechanism that allows e.g. adding a
 vector to all rows or columns of a matrix. Not all existing gpu array implementations
 support this very useful construct. It is however easy to add when we have
-stride support. As Numpy has it, we would like to keep it.
+stride support. As Numpy has it, we would like to keep it.}.  Some implementations
+support only vectors or matrices, some support only \emph{float32},
+only contiguous memory layout, etc$\ldots$ None of them targets both
+CUDA and OpenCL.
+
+The goal is to have a common GPU object that we hope will be used by everybody with the following conditions:
+
+\begin{itemize}
+\item Make a n-dimensional array on the gpu that supports strides and broadcasting
+\item Don't make development harder with this n-dimensional array. 
+\item Make the python interface similar to numpy.ndarray
+  \begin{itemize}
+  \item Easier to attract other people from python community
+  \end{itemize}
+\item Have the base object in C to allow collaboration with other non-python projects.
+  \begin{itemize}
+  \item We want people from C, C++, ruby, R, etc... to all use the same base Gpu ndarray.
+  \end{itemize}
+\item Be compatible with CUDA and OpenCL
+\end{itemize}
+
+We believe that for a common GPU object, we need an n-dimensional
+array. The motivation is that forcing users to use an object that
+supports only 1 or 2 dimensions adds complexity when dealing with algorithms that have natively more than 2 dimensions.
+We don't think that this complexity should be dealt with by each user and 
+having a base object that supports n-dimensions, removes
+this complexity.
 
 We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
 One may be that such a general tensor implementation on GPU is hard and time consuming to get right and efficient.
 
-% TODO: fix
-This can be easily bypassed by using
-a function to check and convert % TODO: check and convert what?
-if necessary to a known memory layout.
-As an example, if a developer only wants to consider inputs in C order for one function, he could just call a function on his inputs to
-convert each one into its supported layout. % TODO: unclear
+From the developer's point of view, sometimes it is useful to support general strides in inputs and sometimes not.
+In the case where the developer does not want general strides in inputs, we think
+that calling a function to assert/convert the inputs to the desired layout is not too complicated or time consuming.
+Especially when those functions are provided. For example, if a
+developer writes a kernel that only supports C-order inputs, he could
+just call a function on his inputs to convert each one to a C layout
+and then proceed as usual.
 
-We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
-One may be that such a general tensor implementation on GPU is hard and time consuming to get right and efficient.
-This can be easily side-stepped by using a function to check and convert the memory layout of input tensors.
-For example, if a developer writes a kernel that only supports C-order inputs, he could just call a function on his inputs to convert each one to a C layout and then proceed as usual.
+\begin{comment}
+Many times, the input layout chosen by the developer of a function
+will lead to better memory access pattern than a random memory
+layout. So it is not trivial to say that generalizing the
+implementation to support general memory layout will lead to
+significant performance gain. 
+\end{comment}
 
 A second reason why people didn't implement all those features is
-that having more dimensions and having strides strides take more
+that having more dimensions and having general strides take more
 computation for indexing. This can lead to slower code. Lets examine the example of the addition of 2 tensors of 10 dimensions.
 In serial code, having more dimensions just adds more imbricated loops.  
-If you loop over the dimensions on the right order (according to the layout), having more loops will not make much of a difference.
-%If the inner loop is big enough, having more loops on top probably won't make a big difference.
+If you loop over the dimensions on the right order (according to the layout) and the inner loop is big enough, having more loops will not make much of a difference.
 In parallel code, it is much harder to make the indexing computations not overshadow the actual computations. 
 CUDA can provide only up to 5 implicit loops. So all extra dimensions require
 additional indexing computation. Also, if the size of those dimensions
@@ -106,7 +134,7 @@ dimensions you can collapse for which function and inputs. This is
 implemented for elemwise operations as discussed in the ``Current
 implementation'' section.
 
-We think that if we provide such optimized functions for elemwise and
+We think that if we provide such optimized functions for element wise and
 reduction operations, we will cover enough cases where the conversion from
 one memory layout to another can be combined with computations. This
 can still impact the performance due to coalescing constraints, but we
@@ -124,54 +152,6 @@ The lack of a common GPU tensor create many problems. Here is a few:
 All those problem are aggravated by the fact that GPU code is
 harder/slower to do correctly and fast than serial CPU code.
 \end{comment}
-
-\subsection{Pitfalls to Avoid}
-\begin{itemize}
-\item Start alone
-  \begin{itemize}
-  \item We need different people/groups to ``adopt'' the new GpuNdArray
-  \end{itemize}
-\item Too simple(ex: just a 1d array) - other projects won't adopt as it won't fit there need.
-\item Too general - other projects will implement ``light'' version... and not adopt
-  \begin{itemize}
-  \item Having an easy way to convert/check conditions could alleviate this.
-  \end{itemize}
-\end{itemize}
-
-\subsection{Goal/Strategy}
-The goal is to have a common GPU object that we hope will be used by everybody. We think that the best strategy is:
-
-\begin{itemize}
-\item Make a n-dimensional array on the gpu that supports strides and broadcasting
-\item Make the python interface similar to numpy.ndarray
-  \begin{itemize}
-  \item Easier to attract other people from python community
-  \end{itemize}
-\item Have the base object in C to allow collaboration with other non-python projects.
-  \begin{itemize}
-  \item We want people from C, C++, ruby, R, etc... to all use the same base Gpu ndarray.
-  \end{itemize}
-\item Be compatible with CUDA and OpenCL
-\end{itemize}
-
-
-We believe that for a common GPU object, we need an n-dimensional
-array. The motivation is that forcing users to use an object that
-supports only 1 or 2 dimensions adds complexity when dealing with algorithms that have natively more than 2 dimensions.
-We don't think that this complexity should be dealt with by each user and 
-having a base object that supports n-dimensions, removes
-this complexity.
-
-From the developer's point of view, sometimes it is useful to have a support for
-strides in inputs and sometimes not. In the case where the developer does not want strides, we think
-that calling a function to assert/convert the inputs to the desired layout is not too complicated or time consuming.
-Especially when those functions are provided.
-
-Many times, the input layout chosen by the developer of a function
-will lead to better memory access pattern than a random memory
-layout. So it is not trivial to say that generalizing the
-implementation to support general memory layout will lead to
-significant performance gain. 
 
 \section{Existing Implementation}
 \subsection{Theano(CudaNdarray)}
@@ -203,14 +183,8 @@ We see clearly that none of those implementations offer all of what we want for 
 
 \section{Current implementation}
 
-We currently have all the code implemented and working for CUDA.  
-OpenCL is partially implemented and some adjustments remain to be done.  
-
-\begin{comment}
-Multiple backend:
-Current behavior not wanted
-    * No CPU code generated from the python interface(for PyOpenCL and PyCUDA) Gpu code are ok.
-\end{comment}
+We currently have all the code implemented and working for CUDA.
+OpenCL is partially implemented and some adjustments remain to be done.
 
 \subsection{Functionality}
 
@@ -256,7 +230,7 @@ try to \emph{collapse} consecutive dimensions for the purpose of doing
 element-wise computation. For example if we want to add 2 tensors of
 10 dimensions and that both of them are c contiguous, we can use the
 same gpu function as for tensor of 1 dimension. This will give the
-same results.
+same results but with fewer index calculations.
 
 We can extend this to more case. If we still want to add 2 tensors of
 2 dimensions, but one inputs is strided on the outermost dimensions,
@@ -277,9 +251,18 @@ They were made on a GeForce GTX 580.
 \includegraphics[width=0.5\textwidth]{a2pb2p2ab_no_alloc}
 
 We can conclude from these benchmarks that we have a bigger base cost that PyCUDA.
-Although it is interesting to note that the strides code does not add any significant overhead to the computations.
+Although it is interesting to note that the strides code does not add any significant overhead to the computations.TODO: TRUE/FALSE?!?!?
 
 \section{Future Plans}
+
+We plan to continue lowering the elemwise overhead vs PyCUDA. To make
+it all functionality working with OpenCL while maximixing the code
+reuse. We also plan to implement reduction operation and to contact
+people from the C/C++ community to have a good interface available in
+that language.
+
+As Theano authors are part of this project, it will get used in a futur Theano version. PyCUDA/PyOpenCL author have started a branch to use this new object.
+
 \section{Conclusion}
 
 %\subsection{Margins in LaTeX}
