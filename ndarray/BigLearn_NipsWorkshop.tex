@@ -39,34 +39,52 @@ Montr\'eal, Canada \\
 \maketitle
 
 \begin{abstract}
-Currently there are multiple array/matrix/n-dimensional objects
-that exist on the GPU.  This hinders sharing of GPU code and causes
-duplicate development work. This paper presents a proposition and a
-first version~\citep{GpuNdArray} for a common GPU n-dimensional
-array(tensor). It will work with CUDA and OpenCL. It will be
-usable in python, C and possibly other languages.
+Currently there are multiple incompatible array/matrix/n-dimensional object implementations
+that exist for GPUs. This hinders sharing of GPU code and causes
+duplicate development work. This paper proposes and presents a
+first version of a common GPU n-dimensional
+array(tensor) named ~\citep{GpuNdArray} that works with both CUDA and OpenCL. 
+It will be usable in python, C++ and possibly others languages.
 \end{abstract}
 
 \section{Introduction}
-Currently there are at least 4 different GPU arrays in python:
-CudaNdarray(Theano), GPUArray(PyCUDA) and CUDAMatrix(cudamat),
+Currently there are at least 4 different GPU array implementations in python:
+CudaNdarray(Theano), GPUArray(PyCUDA) and CUDAMatrix(cudamat), % TODO: il serait bien d'avoir des citaitons
 GPUArray(PyOpenCL). There are also other implementations like Trust in
-C++.  The problem is that they are not compatible with each
-other. All of them also implement a subset of the functionality of a
-tensor(n-dimensional array) that support strides and broadcasting like
-what Numpy~\citep{numpy-2007} provides on the CPU.
+C++. One problem is that they are incompatible with each
+other. Each of them implements a different subset of the features that 
+Numpy~\citep{numpy-2007} provides on the CPU, namely a tensor object (arbitrary-dimensional array) with support for \emph{strides} and \emph{broadcasting}.
+Some implementations support only vectors or matrices, some support only \emph{float32}, only contiguous memory layout, etc$\ldots$
+None of them targets both CUDA and OpenCL.
 
-Strides are a way to specify what to skip between elements in a given dimension. 
-This allows the code to have a view that represents only the odd rows of a matrix without copying data or only the real part of a complex tensor.
-More generally this allows for views on existing tensor memory space that only see a non-contiguous part. 
-What is to be skipped can be specified independently on each dimension.  
-We represent them as slice with an inclusive start index, an exclusive end index and a step between elements.
+\emph{Strides} are a way to specify the number of elements to skip when going
+to the next element in a given dimension. As an example, this allows
+to operate on a view that represents only odd, even, every third row, etc$\ldots$ of
+a matrix. This avoids copying data and lowers the memory usage and memory
+access. More generally it allows to operate on a view that sees only some part of an existing tensor
+memory space. A part can be
+specified for each dimension as a range of elements, possibly with a
+step different than 1 between each consecutive elements in the
+view. We will represent them as a slice with a start(included) index, an
+end(excluded) index and a step.
 
-Broadcasting is a general operation on tensors that allows to extend a length one dimension to fit another tensor.
-Not all existing implementations of a tensor support it.
-This is really useful and easy to add when we have strides support and since Numpy has it, we want it too.
+\emph{Broadcasting} is a generalization on tensors of the convention and mechanism that allows e.g. adding a
+vector to all rows or columns of a matrix. Not all existing gpu array implementations
+support this very useful construct. It is however easy to add when we have
+stride support. As Numpy has it, we would like to keep it.
 
-We think that one of the reasons why there are so many different base objects is that supporting a general tensor with strides makes coding for the GPU even harder.
+We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
+One may be that such a general tensor implementation on GPU is hard and time consuming to get right and efficient.
+
+% TODO: fix
+This can be easily bypassed by using
+a function to check and convert % TODO: check and convert what?
+if necessary to a known memory layout.
+As an example, if a developer only wants to consider inputs in C order for one function, he could just call a function on his inputs to
+convert each one into its supported layout. % TODO: unclear
+
+We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
+One may be that such a general tensor implementation on GPU is hard and time consuming to get right and efficient.
 This can be easily side-stepped by using a function to check and convert the memory layout of input tensors.
 For example, if a developer writes a kernel that only supports C-order inputs, he could just call a function on his inputs to convert each one to a C layout and then proceed as usual.
 
@@ -81,16 +99,16 @@ CUDA can provide only up to 5 implicit loops. So all extra dimensions require
 additional indexing computation. Also, if the size of those dimensions
 are not suited to the GPU, this can lead to lower performance.
 
-There are optimizations possible for computing the indexing like
-collapsing some dimensions on the cpu and invisibly using a kernel
-that supports less dimensions. The trick come from knowing which 
+Optimizations are possible for computing the indexing, like
+collapsing some dimensions on the cpu and implicitly using a kernel
+that uses fewer dimensions. The trick lies in knowing which 
 dimensions you can collapse for which function and inputs. This is
 implemented for elemwise operations as discussed in the ``Current
 implementation'' section.
 
 We think that if we provide such optimized functions for elemwise and
 reduction operations, we will cover enough cases where the conversion from
-one memory layout to another can be combined with the computation. This
+one memory layout to another can be combined with computations. This
 can still impact the performance due to coalescing constraints, but we
 don't expect that to be significant most of the time.
 
@@ -121,7 +139,7 @@ harder/slower to do correctly and fast than serial CPU code.
 \end{itemize}
 
 \subsection{Goal/Strategy}
-The goal is to have a common GPU object that will be used by everybody. We think that the best strategy is:
+The goal is to have a common GPU object that we hope will be used by everybody. We think that the best strategy is:
 
 \begin{itemize}
 \item Make a n-dimensional array on the gpu that supports strides and broadcasting
@@ -129,30 +147,30 @@ The goal is to have a common GPU object that will be used by everybody. We think
   \begin{itemize}
   \item Easier to attract other people from python community
   \end{itemize}
-\item Have the base object in C to allow collaboration with more project.
+\item Have the base object in C to allow collaboration with other non-python projects.
   \begin{itemize}
-  \item  want people from C, C++, ruby, R, ... to all use the same base GPU ndarray.
+  \item We want people from C, C++, ruby, R, etc... to all use the same base Gpu ndarray.
   \end{itemize}
 \item Be compatible with CUDA and OpenCL
 \end{itemize}
 
 
-We think that for a common GPU object, we need an n-dimensional
-array. This is motivated by the fact that forcing the user to use an object that
-support only 1 or 2 dimensions adds complexity when dealing with algorithms that have natively more than 2 dimensions.
+We believe that for a common GPU object, we need an n-dimensional
+array. The motivation is that forcing users to use an object that
+supports only 1 or 2 dimensions adds complexity when dealing with algorithms that have natively more than 2 dimensions.
 We don't think that this complexity should be dealt with by each user and 
 having a base object that supports n-dimensions, removes
 this complexity.
 
-From the developer point of view, sometimes it is worth to support
-strides in inputs and sometimes not.  In the case where the developer does not want to support strides, we don't think
-that calling a function to assert/convert the inputs to the desired layout is something too complicated or time consuming.
+From the developer's point of view, sometimes it is useful to have a support for
+strides in inputs and sometimes not. In the case where the developer does not want strides, we think
+that calling a function to assert/convert the inputs to the desired layout is not too complicated or time consuming.
 Especially when those functions are provided.
 
-Often, the input layout chosen by the developer of a function
-will lead to a better memory access pattern then a random memory
+Many times, the input layout chosen by the developer of a function
+will lead to better memory access pattern than a random memory
 layout. So it is not trivial to say that generalizing the
-implementation to support an arbitrary memory layout will lead to a
+implementation to support general memory layout will lead to
 significant performance gain. 
 
 \section{Existing Implementation}
