@@ -155,12 +155,10 @@ harder/slower to do correctly and fast than serial CPU code.
 
 \section{Existing Implementation}
 \subsection{Theano(CudaNdarray)}
-Theano is the system that provides the closest approximation of a GPU tensor. From its web site Theano~\citep{bergstra+al:2010-scipy} is:
-``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''. The web site also cites that it has a ``tight integration with numpy'', ``transparent use of GPU'', ``efficient symbolic differentiation'', ``speed and stability optimization'', ``dynamic C code generation'' and ``extensive unit-testing and self verification''.
+Theano is the system that provides the closest approximation of a GPU tensor. According to its web site Theano~\citep{bergstra+al:2010-scipy} is:
+``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''.
 
-It implements a GPU tensor with strides and broadcasting, but supports only single precision floating point and CUDA. Also, the strides information are stored differently than numpy. Theano stores the number of elements to skip to access the next element. Numpy stores the number of bytes to skip.
-
-We prefer to use the number of bytes because it allows to work with non-homogenous data such as structs of (float32,uint8) and provide views of individual elements.  This is not currently supported, be we do not wish to prevent somebody from adding this in the future.
+It implements a GPU tensor with strides and broadcasting, but supports only single precision floating point and CUDA. Also, the strides information are stored differently than numpy. Theano stores the number of elements to skip to access the next element and numpy stores the number of bytes to skip.
 
 \subsection{PyCUDA/PyOpenCL(GPUArray)}
 PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009} are python wrappers around CUDA and OpenCL respectively. In addition to wrapping their respective library, they do automatic memory management, add a GPUarray object and some abstraction for compilation. They also automatically translates errors to python exceptions.
@@ -176,10 +174,10 @@ So we clearly see that it support only CUDA and matrix. If we look deeper we see
 Gnumpy~\citep{gnumpy-TR2010} is built on top of cudamat. It allows to work with n-dimensional arrays when they are contiguous in memory. So, no support for strides. It also adds support for the boolean type by using 1.0 and 0.0 in floating point to represent true and false, respectively. It also supports broadcasting via numpy syntax.
 
 \subsection{Trust}
-Trust~\citep{Thrust} is a C++ template library. It provides a vector object for cuda. It supports all data types.  Also, as it supports only 1 dimension, there are no means of broadcasting nor strides.
+Trust~\citep{Thrust} is a C++ template library. It provides a vector object for CUDA. It supports all data types.  Also, as it supports only 1 dimension, there are no means of broadcasting nor strides.
 
 \subsection{Summary}
-We see clearly that none of those implementations offer all of what we want for a common GPU tensor. As the Theano implementation supports strides and that it is easier to add other types than to add strides support, we used much of its code as a starting point for our implementation. Theano also implemented some optimizations to lower the performance loss of having more dimensions.
+We see clearly that none of those implementations offer all of what we want for a common GPU tensor. As the Theano implementation supports strides and that it is easier to add other types than to add strides support, we used much of its code as a starting point for our implementation, even if we have to change the strides model to use the number of bytes to skip rather than the number of elements.  This will allow working with non-homogenous data such as structs of (float32,uint8) and providing views of individual elements. Theano also implemented some optimizations to lower the performance loss of having more dimensions.
 
 \section{Current implementation}
 
