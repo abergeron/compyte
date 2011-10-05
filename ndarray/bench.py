@@ -249,7 +249,7 @@ def prod(seq):
 MARKERS = ['+', '*', ',', '.', '1', '2', '3', '4', '<', '>', 'D', 'H', '^', '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
 COLORS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
 
-def make_graph(name, b, msa):
+def make_graph(name, b, msa, times={}):
     ext = 'pdf'
     import matplotlib
     matplotlib.use(ext, warn=False) # maybe Agg or Cairo
@@ -263,11 +263,15 @@ def make_graph(name, b, msa):
         xvals = []
         yvals = []
         print lbl
+        if lbl in times:
+            assert len(times[lbl]) == len(shapes)
+            yvals = numpy.asarray(times[lbl])*1e6
         for vals in var_iter(vars):
-            #ref = b.numpy(**vals)
-            ref = None
             xvals.append(prod(vals.values()[0].shape))
-            yvals.append(m(b, vals, ref=ref)*1e6)
+            if lbl not in times:
+                #ref = b.numpy(**vals)
+                ref = None
+                yvals.append(m(b, vals, ref=ref)*1e6)
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
