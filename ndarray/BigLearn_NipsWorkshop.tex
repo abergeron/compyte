@@ -180,22 +180,30 @@ They were made on a GeForce GTX 580.
 %%\includegraphics[width=0.5\textwidth]{2ap3b_no_alloc}
 \includegraphics[width=0.495\textwidth]{a2pb2p2ab_no_alloc}
 
-We can conclude from these benchmarks that we have a bigger base cost that PyCUDA.
-Although it is interesting to note that the strides code does not add any significant overhead to the computations.TODO: TRUE/FALSE?!?!?
+We can conclude from these benchmarks that we have a bigger base cost
+that PyCUDA with few elements, but this get not significant with more
+elements.  We see clearly that doing the collpsing of dimensions give
+a significant speed up by comparing the line "compyte 4d contiguous"
+and "compyte 4d contiguous not collapsed". Normally on the gpu,
+strided access should lower the speed, but went comparing the line
+"compyte 4d strided outer"(collapsed to 2 dimensions) and the line
+"compyte 4d coutigious not collapsed" we see that the strided have
+less impact that the number of dimensions used in the element wise gpu
+function. We currently didn't used implicit loop in CUDA, doing so
+would help lower this index computation cost.
 
 TODO: moar stuff
 
 \section{Future Plans}
 
 We plan to continue lowering the overhead as much as possible and to finish the OpenCL side of things.
-We also plan to implement reduction operations and to contact people from the C/C++ community to have a good interface available in
-that language.
+We also plan to implement reduction operations and to contact people from the C/C++ community to have a good interface available in that language. Make element wise code that use implicit loop in CUDA/PyOpenCL.
 
 Since some Theano authors are working on this project, it will see some usage in a future version. PyCUDA and PyOpenCL, on their side, have already started a branch to use this new object.
 
 \section{Conclusion}
 
-TODO
+We have explained why we need a gpu n-dimentional array. We have show that we can work around the additional complexity with fonction that will convert memory layout and optimization trick like collapsing of dimensions.
 
 \subsubsection*{Acknowledgments}
 
