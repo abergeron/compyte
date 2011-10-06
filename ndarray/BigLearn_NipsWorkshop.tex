@@ -41,7 +41,7 @@ Montr\'eal, Canada \\
 \begin{abstract}
 Currently there are multiple incompatible array/matrix/n-dimensional object implementations that exist for GPUs. 
 This hinders the sharing of GPU code and causes duplicate development work.
-This paper proposes and presents a first version of a common GPU n-dimensional array(tensor) named ~\citep{GpuNdArray} that works with both CUDA and OpenCL. 
+This paper proposes and presents a first version of a common GPU n-dimensional array(tensor) named GpuNdArray ~\citep{GpuNdArray} that works with both CUDA and OpenCL. 
 It will be usable from python, C and possibly other languages.
 \end{abstract}
 
@@ -54,14 +54,14 @@ CUDAMatrix(cudamat)~\citep{cudamat-TR2009}.
 There are also other implementations like Trust~\citep{Thrust} in C++. 
 One problem is that they are incompatible with each other. 
 Each of them implements a different subset of the features that Numpy~\citep{numpy-2007} provides on the CPU, namely a tensor object (arbitrary-dimensional array) with support for \emph{strides}~\footnote{
-\emph{Strides} are a way to specify for each dimension in an an n-dimensional object to specify a subrange and the number of elements to skip when going
+\emph{Strides} are a way to specify for each dimension in an n-dimensional array a subrange and the number of elements to skip when going
 to the next element. 
 This allows to operate on a view of the data that represents, say, only odd rows of a matrix without copying any data.
 The part to view in each dimension is specified as a range of elements, with a step between each element.
 This is represented by a slice with an inclusive start index, an exclusive end index and a step.
 }
 and \emph{broadcasting}~\footnote{
-\emph{Broadcasting} is a generalization of elementwise operations on tensors that extends certain dimensions to fit the required shape.
+\emph{Broadcasting} is a generalization of element-wise operations on tensors that extends certain dimensions to fit the required shape.
 For example, this allows adding a vector to all columns of a matrix.
 Not all existing GPU array implementations support this very useful construct.
 It is however easy to add when we have strides support.
@@ -93,9 +93,9 @@ We don't think that this complexity should be dealt with by each user and having
 We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
 
 One may be that such a general tensor implementation on GPU is hard and time consuming to get right and efficient.
-Since support for general layout is time consuming and sometimes impossible, we will provide functions to convert any tensor to a desired memory layout.  This can be used by kernels that support only a certain layouts to convert their inputs.
+Since support for general memory layout is time consuming and sometimes impossible, we will provide functions to convert any tensor to a desired memory layout.  This can be used by kernels that support only a certain layouts to convert their inputs.
 
-Another may be that support for additional dimensions requires extra computations in the kernel which can more easily overshadow the actual computation on the GPU.
+Another reason may be that support for additional dimensions requires extra computations in the kernel which can more easily overshadow the actual computation on the GPU.
 In order to offset this cost, optimizations like the collapsing of dimensions can be done before launching the kernel.  
 This is implemented for elemwise operations as discussed in the ``Current implementation'' section.
 
@@ -191,7 +191,7 @@ We plan to continue lowering the overhead as much as possible and to finish the 
 We also plan to implement reduction operations and to contact people from the C/C++ community to have a good interface available in
 that language.
 
-Since some Theano authors are working on this project, it should see some usage in a future version. PyCUDA and PyOpenCL, on their side, have already started a branch to use this new object.
+Since some Theano authors are working on this project, it will see some usage in a future version. PyCUDA and PyOpenCL, on their side, have already started a branch to use this new object.
 
 \section{Conclusion}
 
