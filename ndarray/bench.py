@@ -20,14 +20,18 @@ try:
 except ImportError:
     pass
 
-def timeit_core(f, loops, nogc):
+def timeit_core(f, loops, nogc, sync_gpu):
     gc.collect()
     if nogc:
         gc.disable()
     try:
+        if sync_gpu:
+            pycuda._driver.Context.synchronize()
         tstart = time.time()
         for _ in xrange(loops):
             f()
+        if sync_gpu:
+            pycuda._driver.Context.synchronize()
         tend = time.time()
     finally:
         if nogc:
@@ -36,12 +40,22 @@ def timeit_core(f, loops, nogc):
 
     return (tend - tstart)/loops
 
-def timeit(f, lbl, n_tries=3, nogc=True):
+def timeit(f, lbl, n_tries=3, nogc=True, sync_gpu=False):
+    # sync_gpu sync before/after for the first estimation call
+    # and before/after the loops.
+    # The after sync time overhead is included in the timming.
     gc.disable()
     try:
-        ts = time.time()
-        f()
-        te = time.time()
+        if sync_gpu:
+            pycuda._driver.Context.synchronize()
+            ts = time.time()
+            f()
+            pycuda._driver.Context.synchronize()
+            te = time.time()
+        else:
+            ts = time.time()
+            f()
+            te = time.time()
     finally:
         gc.enable()
         gc.collect()
@@ -50,9 +64,10 @@ def timeit(f, lbl, n_tries=3, nogc=True):
     # This will generate a runtime between 1 and 10 seconds
     loops = max(1, int(10**math.floor(math.log(10/est, 10))))
     
-    mintime = min(timeit_core(f, loops, nogc) for _ in xrange(n_tries))
-    
-    print lbl, "(", loops, "loops ):", mintime, "s ( best of", n_tries, ")"
+    times = [timeit_core(f, loops, nogc, sync_gpu) for _ in xrange(n_tries)]
+    mintime = min(times)
+    total_time = (numpy.asarray(times)*loops).sum()
+    print lbl, "(%d loops): %.3es (best of %d) run time %.2f"%(loops, mintime, n_tries, total_time)
     return mintime
 
 numpy_tmpl = r"""
@@ -205,14 +220,13 @@ class bench(object):
             gvars = apply_strides(gvars)
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
-            print 'Dimensions after collapse', gen_elemwise.elemwise_collapses(gvars.values(),[res])[0]
             if ref is not None:
                 assert numpy.allclose(res, ref)
             if reuse_output:
                 out = res
             else:
                 out = None
-            t = timeit(lambda: self.ndarray(gvars, out), "compyte ", nogc=False)
+            t = timeit(lambda: self.ndarray(gvars, out), "compyte ", nogc=False, sync_gpu=True)
             if retval is not None:
                 retval['compyte'] = t
             return t
@@ -232,7 +246,7 @@ class bench(object):
                 out = res
             else:
                 out = None
-            t = timeit(lambda: self.pycuda(pvars, out), "pycuda  ", nogc=False)
+            t = timeit(lambda: self.pycuda(pvars, out), "pycuda  ", nogc=False, sync_gpu=True)
             if retval is not None:
                 retval['pycuda'] = t
             return t
