@@ -220,6 +220,8 @@ class bench(object):
             gvars = apply_strides(gvars)
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
+            nd_col, info = gen_elemwise.elemwise_collapses(gvars.values(),[res])
+            print 'Size/Dimensions/Shapes after collapse:', numpy.prod(res.shape), nd_col, info[0][:nd_col]#, numpy.asarray(info[1])[:,:nd_col]
             if ref is not None:
                 assert numpy.allclose(res, ref)
             if reuse_output:
@@ -293,13 +295,15 @@ def make_graph(name, b, msa, times={}):
         print lbl
         if lbl in times:
             assert len(times[lbl]) == len(shapes)
-            yvals = numpy.asarray(times[lbl])*1e6
+            yvals = numpy.asarray(times[lbl])
         for vals_strides in var_iter(vars):
             xvals.append(prod(vals_strides.values()[0][0].shape))
             if lbl not in times:
                 #ref = b.numpy(**vals)
                 ref = None
-                yvals.append(m(b, vals_strides, ref=ref)*1e6)
+                yvals.append(m(b, vals_strides, ref=ref))
+        print "times", yvals
+        yvals = [y*1e6 for y in yvals]
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
