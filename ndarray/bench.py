@@ -335,21 +335,122 @@ series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1
                a=((100,), (1000,), (100, 200)))
 
 if __name__ == "__main__":
-    msa = [('pycuda', bench.try_pycuda, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-           ('numpy 1d', bench.try_numpy, ((100,), (1000,), (10000,), (100000,), (1000000,))),#, (10000000,))),
-           ('compyte 1d', bench.try_compyte, ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-           #('compyte 2d', bench.try_compyte, ((10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000), (10000, 1000)), None, None, True),
-           #('compyte 3d', bench.try_compyte, ((10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10), (100, 100, 100), (1000, 100, 100)), None, None, True),
-           ('compyte 4d', bench.try_compyte, ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10)))]
-    msa2 = [('pycuda', lambda b, vals, ref: b.try_pycuda(vals, reuse_output=True, ref=ref), ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-            ('compyte 1d',  lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),  ((100,), (1000,), (10000,), (100000,), (1000000,), (10000000,))),
-            ('compyte 4d', lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref), ((10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10), (100, 10, 10, 10), (100, 100, 10, 10), (100, 100, 100, 10))),
-            ('compyte 4d strided', lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref), (((20, 2), (20, 2), (2, 2), (2, 2)), ((20, 2), (20, 2), (20, 2), (2, 2)), ((20, 2), (20, 2), (20, 2), (20, 2)), ((200, 2), (20, 2), (20, 2), (20, 2)), ((200, 2), (200, 2), (20, 2), (20, 2)), ((200, 2), (200, 2), (200, 2), (20, 2))))]
+    shapes_1d = [(100,), (1000,), (10000,), (100000,), (1000000,), (5000000,), (10000000,), (50000000,)]
+    shapes_2d = [(10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000),
+                 (5000, 1000), (10000, 1000), (50000, 1000)]
+    shapes_3d = [(10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10),
+                 (100, 100, 100), (500, 100, 100), (1000, 100, 100), (5000, 100, 100)]
+    shapes_4d = [(10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10),
+                 (100, 10, 10, 10), (100, 100, 10, 10), (500, 100, 10, 10),
+                 (100, 100, 100, 10), (500, 100, 100, 10)]
+    shapes_4d_strided_outer_coalesced = [((8, 2), 1, 1, 32),
+                                         ((8, 2), 10, 1, 32),
+                                         ((8, 2), 10, 10, 32),
+                                         ((62, 2), 10, 10, 32),
+                                         ((62, 2), 100, 10, 32),
+                                         ((312, 2), 100, 10, 32),
+                                         ((62, 2), 100, 100, 32),
+                                         ((312, 2), 100, 100, 32)]
+    shapes_4d_strided_outer = [((20, 2), 10, 1, 1),
+                               ((20, 2), 10, 10, 1),
+                               ((20, 2), 10, 10, 10),
+                               ((200, 2), 10, 10, 10),
+                               ((200, 2), 100, 10, 10),
+                               ((1000, 2), 100, 10, 10),
+                               ((200, 2), 100, 100, 10),
+                               ((1000, 2), 100, 100, 10)]
+    shapes_4d_strided4d = [((20, 2), (20, 2), (2, 2), (2, 2)),
+                           ((20, 2), (20, 2), (20, 2), (2, 2)),
+                           ((20, 2), (20, 2), (20, 2), (20, 2)),
+                           ((200, 2), (20, 2), (20, 2), (20, 2)),
+                           ((200, 2), (200, 2), (20, 2), (20, 2)),
+                           ((1000, 2), (200, 2), (20, 2), (20, 2)),
+                           ((200, 2), (200, 2), (200, 2), (20, 2)),
+                           ]
+                           #((1000, 2), (200, 2), (200, 2), (20, 2))] # 3G per object
 
-    for suffix, m in [('', msa),('_no_alloc', msa2)]:
-        make_graph('ap1'+suffix, ap1, msa=m)
+    # Remove the case 100 et 1000 elements
+    if True:
+        for x in (shapes_1d,
+                  shapes_2d,
+                  shapes_3d,
+                  shapes_4d,
+                  shapes_4d_strided_outer_coalesced,
+                  shapes_4d_strided_outer,
+                  shapes_4d_strided4d):
+            x.remove(x[0])
+            x.remove(x[0])
+
+    # Remove the last case (50000000 elements)
+    # as this hide the detail when we have few elements
+    if True:
+        for x in (shapes_1d,
+                  shapes_2d,
+                  shapes_3d,
+                  shapes_4d,
+                  shapes_4d_strided_outer_coalesced,
+                  shapes_4d_strided_outer,
+                  shapes_4d_strided4d):
+            x.remove(x[-1])
+
+    # Remove the shape that take more then 700M of inputs
+    # We need a minimum of 1 inputs and 2 outputs!
+    if True:
+        for x in (shapes_1d,
+                  shapes_2d,
+                  shapes_3d,
+                  shapes_4d,
+                  shapes_4d_strided_outer_coalesced,
+                  shapes_4d_strided_outer,
+                  shapes_4d_strided4d):
+            for shape in x:
+                if numpy.prod([ s if not isinstance(s, (tuple,list)) else s[0] for s in shape])*4>700e6:
+                    x.remove(shape)
+
+    times_ap1 = {'pycuda':[2.19774413109e-05, 2.19221115112e-05, 4.95604705811e-05, 0.000240413618088, 0.000483848741055, 0.0024825881815],
+             'compyte 1d contiguous':[5.62311887741e-05, 5.63329601288e-05, 5.65941119194e-05, 0.000271942930222, 0.000558048298359, 0.00291627338171],
+             'compyte 4d contiguous':[6.96398019791e-05, 6.97722792625e-05, 6.97479104996e-05, 0.000272047069073, 0.000557991290092, 0.00264423480034],
+             #'compyte 4d strided outer coallesced':[],
+             #'compyte 4d strided outer':[],
+             #'compyte 4d strided 4d':[],
+                 }
+
+    msa = [('pycuda', bench.try_pycuda, shapes_1d),
+#           ('numpy 1d', bench.try_numpy, shapes_1d[:-1]),
+           ('compyte 1d contiguous', bench.try_compyte, shapes_1d),
+           #('compyte 2d', bench.try_compyte, shapes_2d),
+           #('compyte 3d', bench.try_compyte, shapes_3d),
+           ('compyte 4d contiguous', bench.try_compyte, shapes_4d)]
+    msa2 = [('pycuda',
+             lambda b, vals, ref: b.try_pycuda(vals, reuse_output=True, ref=ref),
+             shapes_1d),
+            ('compyte 1d contiguous',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_1d),
+#            ('compyte 1d contiguous not collapsed',
+#             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref, collapse=False),
+#             shapes_1d),
+            ('compyte 4d contiguous',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_4d),
+            ('compyte 4d contiguous not collapsed',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref, collapse=False),
+             shapes_4d),
+#            ('compyte 4d strided outer coallesced',
+#             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+#             shapes_4d_strided_outer_coalesced),
+            ('compyte 4d strided outer',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_4d_strided_outer),
+            ('compyte 4d strided 4d',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_4d_strided4d),
+            ]
+
+    for suffix, m in [('_no_alloc', msa2)]:#[('', msa),('_no_alloc', msa2)]:
+        make_graph('ap1'+suffix, ap1, msa=m)#, times=times_ap1) # paper
+        make_graph('a2pb2p2ab'+suffix, b3, msa=m) # paper
+        make_graph('series'+suffix, series, msa=m)
         make_graph('apb'+suffix, apb, msa=m)
         make_graph('2ap3b'+suffix, b2, msa=m)
-        make_graph('a2pb2p2ab'+suffix, b3, msa=m)
         make_graph('2apb10'+suffix, b4, msa=m)
-        make_graph('series'+suffix, series, msa=m)
