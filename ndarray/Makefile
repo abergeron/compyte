@@ -27,7 +27,7 @@ clean:
 cleantmp:
 	rm -f core.* *.o *~
 
-BigLearn_NipsWorkshop.pdf: BigLearn_NipsWorkshop.tex
+BigLearn_NipsWorkshop.pdf: BigLearn_NipsWorkshop.tex ap1_no_alloc.pdf a2pb2p2ab_no_alloc.pdf
 	#latex BigLearn_NipsWorkshop.tex
 	#dvipdf latex BigLearn_NipsWorkshop
 	pdflatex BigLearn_NipsWorkshop
