@@ -74,15 +74,15 @@ None of them targets both CUDA and OpenCL.
 The goal is to have a common GPU object that we hope will be used by everybody with the following conditions:
 
 \begin{itemize}
-\item Make a n-dimensional array on the gpu that supports strides and broadcasting
+\item Make a n-dimensional array on the GPU that supports strides and broadcasting
 \item Don't make development harder with this n-dimensional array. 
 \item Make the python interface similar to numpy.ndarray
   \begin{itemize}
-  \item Easier to attract other people from python community
+  \item Easier to attract other people from the python community
   \end{itemize}
 \item Have the base object in C to allow collaboration with other non-python projects.
   \begin{itemize}
-  \item We want people from C, C++, ruby, R, etc... to all use the same base Gpu ndarray.
+  \item We want people from C, C++, ruby, R, etc... to all use the same base GPU ndarray.
   \end{itemize}
 \item Be compatible with CUDA and OpenCL
 \end{itemize}
@@ -180,30 +180,26 @@ They were made on a GeForce GTX 580.
 %%\includegraphics[width=0.5\textwidth]{2ap3b_no_alloc}
 \includegraphics[width=0.495\textwidth]{a2pb2p2ab_no_alloc}
 
-We can conclude from these benchmarks that we have a bigger base cost
-that PyCUDA with few elements, but this get not significant with more
-elements.  We see clearly that doing the collpsing of dimensions give
-a significant speed up by comparing the line "compyte 4d contiguous"
-and "compyte 4d contiguous not collapsed". Normally on the gpu,
-strided access should lower the speed, but went comparing the line
-"compyte 4d strided outer"(collapsed to 2 dimensions) and the line
-"compyte 4d coutigious not collapsed" we see that the strided have
-less impact that the number of dimensions used in the element wise gpu
-function. We currently didn't used implicit loop in CUDA, doing so
-would help lower this index computation cost.
+We can conclude from these benchmarks that we have a bigger base cost than PyCUDA, but that this cost is not significant for a high number of elements.
+We can see the speedup that is brought by the dimension collapsing by comparing the "compyte 4d contiguous" and "compyte 4d contiguous not collapsed" lines.
 
-TODO: moar stuff
+Normally on the GPU, strided access should lower the speed.
+When comparing the line "compyte 4d strided outer" (collapsed to 2 dimensions) and the line "compyte 4d contiguous not collapsed" we see that the strides computation have a lower overhead than uncollapsed plain indexing.
+We currently don't use the implicit loops in CUDA, doing so would help lower this index computation cost.
 
 \section{Future Plans}
 
 We plan to continue lowering the overhead as much as possible and to finish the OpenCL side of things.
-We also plan to implement reduction operations and to contact people from the C/C++ community to have a good interface available in that language. Make element wise code that use implicit loop in CUDA/PyOpenCL.
+We also plan to implement reduction operations and to contact people from the C/C++ community to have a good interface available in that language.
+We will also make elemwise code use the implicit looping available in CUDA and OpenCL.
 
 Since some Theano authors are working on this project, it will see some usage in a future version. PyCUDA and PyOpenCL, on their side, have already started a branch to use this new object.
 
 \section{Conclusion}
 
-We have explained why we need a gpu n-dimentional array. We have show that we can work around the additional complexity with fonction that will convert memory layout and optimization trick like collapsing of dimensions.
+We have explained why we need a GPU n-dimensional array.
+We have shown that we can work around the additional complexity with functions that convert memory layouts and optimization tricks like collapsing dimensions.
+We hope you appreciate the need for a common object and will look to this project for you future needs.
 
 \subsubsection*{Acknowledgments}
 
