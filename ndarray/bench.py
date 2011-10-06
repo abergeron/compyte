@@ -145,7 +145,6 @@ def pycuda_helper(kern, vars):
         return out
     return pycuda
 
-
 def apply_strides(vars):
     vars2 = {}
     for k, (val, stride) in vars.iteritems():
@@ -206,6 +205,7 @@ class bench(object):
             gvars = apply_strides(gvars)
             self.ndarray = elemwise_helper(self, gvars)
             res = self.ndarray(gvars)
+            print 'Dimensions after collapse', gen_elemwise.elemwise_collapses(gvars.values(),[res])[0]
             if ref is not None:
                 assert numpy.allclose(res, ref)
             if reuse_output:
