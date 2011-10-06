@@ -278,8 +278,8 @@ def prod(seq):
     return s
 
 MARKERS = ['+', '*', ',', '.', '1', '2', '3', '4', '<', '>', 'D', 'H', '^', '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
-COLORS = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-
+COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'k', 'grey', 'orange', 'amber', 'purple', 'pink', '#FFAABB', '#FFAAFF']
+##FFAABB, #FFAAFF
 def make_graph(name, b, msa, times={}):
     ext = 'pdf'
     import matplotlib
