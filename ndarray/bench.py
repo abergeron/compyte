@@ -105,7 +105,7 @@ typedef double npy_float64;
 def empty(vars):
     return None
 
-def elemwise_helper(kern, vars):
+def elemwise_helper(kern, vars, collapse=True):
     import theano
     s = dict((k, theano.scalar.ScalarVariable(theano.scalar.Scalar(str(v.dtype)))) for k, v in vars.iteritems())
 
@@ -120,7 +120,8 @@ def elemwise_helper(kern, vars):
     
     fct = MyGpuNdArray.gen_fct(theano.tensor.Elemwise(comp),
                                [MyGpuNdArray(i) for i in vars.values()],
-                               vars.values()[0].ndim)
+                               vars.values()[0].ndim,
+                               collapse=collapse)
 
     def ndarray(gvars, out=None):
         inputs = [gvars[k] for k in order]
@@ -211,14 +212,14 @@ class bench(object):
             import traceback
             traceback.print_exc()
 
-    def try_compyte(self, vars, ref=None, retval=None, reuse_output=False):
+    def try_compyte(self, vars, ref=None, retval=None, reuse_output=False, collapse=True):
         try:
             # Take care! gpu_ndarray.GpuNdArrayObject will always generate a c contiguous
             # memory region! This bypass the strides tests!
             gvars = dict((k, (gpu_ndarray.GpuNdArrayObject(v), st))
                          for k,(v,st) in vars.iteritems())
             gvars = apply_strides(gvars)
-            self.ndarray = elemwise_helper(self, gvars)
+            self.ndarray = elemwise_helper(self, gvars, collapse=collapse)
             res = self.ndarray(gvars)
             nd_col, info = gen_elemwise.elemwise_collapses(gvars.values(),[res])
             print 'Size/Dimensions/Shapes after collapse:', numpy.prod(res.shape), nd_col, info[0][:nd_col]#, numpy.asarray(info[1])[:,:nd_col]
@@ -287,6 +288,7 @@ def make_graph(name, b, msa, times={}):
     print 'Start graph', name
     idx = 0
     for lbl, m, shapes in msa:
+        print
         vars = {}
         for k in b.vars.keys():
             vars[k] = shapes
@@ -297,13 +299,16 @@ def make_graph(name, b, msa, times={}):
             assert len(times[lbl]) == len(shapes)
             yvals = numpy.asarray(times[lbl])
         for vals_strides in var_iter(vars):
-            xvals.append(prod(vals_strides.values()[0][0].shape))
+            xvals.append(prod(numpy.asarray(vals_strides.values()[0][0].shape)/
+                              vals_strides.values()[0][1]))
             if lbl not in times:
                 #ref = b.numpy(**vals)
                 ref = None
                 yvals.append(m(b, vals_strides, ref=ref))
+        print "nb elem", xvals
         print "times", yvals
         yvals = [y*1e6 for y in yvals]
+        assert len(xvals) == len(yvals)
         plt.semilogx(xvals, yvals, label=lbl,
                      color=COLORS[idx], marker=MARKERS[idx])
         idx += 1
