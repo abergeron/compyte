@@ -9,7 +9,8 @@
 %\documentstyle[nips10submit_09,times,art10]{article} % For LaTeX 2.09
 
 
-\title{A Common GPU n-Dimensional Array for Python and C}
+\title{A Common GPU n-Dimensional Array \\
+ for Python and C}
 
 
 \author{
@@ -49,9 +50,9 @@ It will be usable from python, C and possibly other languages.
 Efficient numerical vector, matrix and tensor computations form the core of much of scientific computing.
 The Python library Numpy~\citep{numpy-2007}, the de-facto standard for efficient numerical computations with CPUs in Python, provides a convenient 
 arbitrary-dimensional array (i.e. tensor) object with support for \emph{strides}~\footnote{
-\emph{Strides} are a way to specify for each dimension in an n-dimensional array a subrange and the number of elements to skip when going
+\emph{Strides} are a way to specify for each dimension in an n-dimensional array a sub-range and the number of elements to skip when going
 to the next element. 
-This allows to operate on a view of the data that represents, e.g. a submatrix, or even only odd rows of a matrix, without copying any data.
+This allows to operate on a view of the data that represents, e.g. a sub-matrix, or even only odd rows of a matrix, without copying any data.
 The part to view in each dimension is specified as a range of elements, with a step between each element.
 This is represented by a slice with an inclusive start index, an exclusive end index and a step.
 }
@@ -72,10 +73,10 @@ Each of them implements a different subset of the features that Numpy provides o
 Some implementations support only vectors or matrices, some support only \emph{float32}\footnote{
 \emph{float32} corresponds to single precision floating point numbers.
 }, or only contiguous memory layout (no strides), etc$\ldots$
-None of them targets simultaneously CUDA and OpenCL backends.
+None of them targets simultaneously CUDA and OpenCL bookends.
 
 Our objective was to design a more flexible common GPU n-dimensional array object, 
-without the limitaitons of current implementations, and with the hope that it may become largely adopted. 
+without the limitation's of current implementations, and with the hope that it may become largely adopted. 
 Our specific goals for this design were:
 
 \begin{itemize}
@@ -93,15 +94,15 @@ Having the base object support n-dimensions eliminates this complexity.
 We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
 
 One may be that such a general tensor implementation on GPU is difficult and time consuming to get right and efficient.
-In addition, developping an efficient operation for the general memory layout can be cumbersome or sometimes even impossible.
+In addition, developing an efficient operation for the general memory layout can be cumbersome or sometimes even impossible.
 This can be alleviated by providing functions to convert any tensor to a desired, possibly more restricted, memory layout (such as contiguous memory).
 These can then be used to convert the inputs for kernels that support only a certain restricted layout.
 
 Another reason may be that support for additional dimensions requires extra computations in the kernel which can sometimes outweigh the actual computation on the GPU.
 In order to offset this cost, automatic optimizations like the collapsing of dimensions can be done before launching the kernel.  
-This is currently implemented for elemwise operations as discussed in Section~\ref{sec:currentimpl}.
+This is currently implemented for element-wise operations as discussed in Section~\ref{sec:currentimpl}.
 
-We believe that if we provide such optimized functions for elemwise and reduction operations, we will cover enough cases where the conversion from one memory layout to another can be combined with computations.
+We believe that if we provide such optimized functions for element-wise and reduction operations, we will cover enough cases where the conversion from one memory layout to another can be combined with computations.
 \footnote{This can still impact the performance due to coalescing constraints, but we don't expect that to be significant most of the time.}
 
 \section{Existing GPU array implementations}
@@ -109,13 +110,13 @@ We believe that if we provide such optimized functions for elemwise and reductio
 Theano is the system that provides the closest approximation of a GPU tensor. 
 According to its web site Theano~\citep{bergstra+al:2010-scipy} is: ``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''.
 
-It implements a GPU tensor with strides and broadcasting, but supports only float32 and only the CUDA backend.
+It implements a GPU tensor with strides and broadcasting, but supports only float32 and only the CUDA back-end.
 Also, the strides information are stored differently than numpy.
 Theano stores the number of elements to skip to access the next element and numpy stores the number of bytes to skip.
 
 \subsection{PyCUDA/PyOpenCL(GPUArray)}
 PyCUDA~\citep{kloeckner_pycuda_2009} and PyOpenCL~\citep{kloeckner_pycuda_2009} are python wrappers around CUDA and OpenCL respectively. 
-In addition to wrapping their respective library, they do automatic memory management, add a GPUarray object and some abstraction for compilation. 
+In addition to wrapping their respective library, they do automatic memory management, add a GPUArray object and some abstraction for compilation. 
 They also automatically translate errors to python exceptions.
 
 Their GPU array objects are limited to contiguous memory regions.
@@ -153,19 +154,19 @@ OpenCL is partially implemented and some adjustments remain to be done.
 
 \subsection{Functionality}
 
-The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as subarrays with strides) and run elemwise kernels.
-In order to support multiple backends (CUDA, OpenCL, ...) we have created a list of utility functions that are to be implemented for each 
+The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels.
+In order to support multiple back-ends (CUDA, OpenCL, ...) we have created a list of utility functions that are to be implemented for each 
 and the rest of the code is shared.
 
-The backend-independent parts take care of indexing, making views, and provide an interface that is very similar to numpy.
+The back-end-independent parts take care of indexing, making views, and provide an interface that is very similar to numpy.
 This is the part that supports any (valid) combination of dimensions and strides.
-Most importantly, the dimension collapsing optimizations are device-independent and can be reused between backends.
+Most importantly, the dimension collapsing optimizations are device-independent and can be reused between back ends.
 
 We are still missing some items before we reach full numpy compatibility, most importantly reductions, setting a part of the array via assignation and reshaping.
 
-\subsection{Elemwise dimensions collapsing}
+\subsection{Element-wise dimensions collapsing}
 
-To lower the indexing computation cost incurred with more dimensions, we can try to \emph{collapse} consecutive dimensions for the purpose of doing elemwise computations.
+To lower the indexing computation cost incurred with more dimensions, we can try to \emph{collapse} consecutive dimensions for the purpose of doing element-wise computations.
 For example, if we add tensors that are C-contiguous, we can use the same kernel for all dimensions (effectively collapsing any number of dimensions to 1) since the result will be the same.
 This way,  we avoid most of the index computations.
 
@@ -174,7 +175,7 @@ So if we have only the last dimension of a tensor that has strides, then we can 
 
 \section{Benchmarks}
 
-In order to measure the overhead of indexing computations relative to existing implementations, we compared some elemwise kernels generated with PyCUDA to some generated using our algorithm (including dimension collapsing and strides data).
+In order to measure the overhead of indexing computations relative to existing implementations, we compared some element-wise kernels generated with PyCUDA to some generated using our algorithm (including dimension collapsing and strides data).
 The timings shown below do not include any transfer time or allocation of output.
 They were measured on a GeForce GTX 580.
 
@@ -196,7 +197,7 @@ We don't currently use implicit loops in CUDA; doing so would help lower this in
 We plan to continue lowering the overhead paid for the added flexibility of having strides and arbitrary dimensions 
 as much as possible and to finish the OpenCL implementation.
 We also plan to implement reduction operations and to contact people from the C/C++ community to have a good interface available in that language.
-We will also make elemwise code use the implicit looping available in CUDA and OpenCL.
+We will also make element-wise code use the implicit looping available in CUDA and OpenCL.
 
 Since some Theano authors are working on this project, it will see some usage in a future version. PyCUDA and PyOpenCL, on their side, have already started a branch to use this new object.
 
