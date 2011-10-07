@@ -100,7 +100,7 @@ These can then be used to convert the inputs for kernels that support only a cer
 
 Another reason may be that support for additional dimensions requires extra computations in the kernel which can sometimes outweigh the actual computation on the GPU.
 In order to offset this cost, automatic optimizations like the collapsing of dimensions can be done before launching the kernel.  
-This is currently implemented for element-wise operations as discussed in Section~\ref{sec:currentimpl}.
+This is currently implemented for element-wise operations as discussed in section~\ref{sec:currentimpl}.
 
 We believe that if we provide such optimized functions for element-wise and reduction operations, we will cover enough cases where the conversion from one memory layout to another can be combined with computations.
 \footnote{This can still impact the performance due to coalescing constraints, but we don't expect that to be significant most of the time.}
@@ -148,7 +148,7 @@ As the Theano implementation supports strides and that it is easier to add other
 Theano also implemented some optimizations to lower the performance loss of having more dimensions.
 
 \section{Current state of our common GPU array implementation}
-\label{sec:currentimpl}.
+\label{sec:currentimpl}
 We currently have all the code implemented and working for CUDA.
 OpenCL is partially implemented and some adjustments remain to be done.
 
