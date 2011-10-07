@@ -359,6 +359,30 @@ if __name__ == "__main__":
                                ((1000, 2), 100, 10, 10),
                                ((200, 2), 100, 100, 10),
                                ((1000, 2), 100, 100, 10)]
+    shapes_4d_strided_inner = [(10, 10, 1, (20, 2)),
+                               (10, 10, 10, (20, 2)),
+                               (10, 10, 10, (20, 2)),
+                               (10, 10, 10, (200, 2)),
+                               (10, 100, 10, (200, 2)),
+                               (10, 100, 10, (1000, 2)),
+                               (10, 100, 100, (200, 2)),
+                               (10, 100, 100, (1000, 2))]
+    shapes_4d_strided_middle = [(10, (20, 2), 10, 1),
+                               (10, (20, 2), 10, 10),
+                               (10, (20, 2), 10, 10),
+                               (10, (200, 2), 10, 10),
+                               (10, (200, 2), 100, 10),
+                               (10, (1000, 2), 100, 10),
+                               (10, (200, 2), 100, 100),
+                               (10, (1000, 2), 100, 100)]
+    shapes_4d_strided_middle2 = [(10, 10, 1, (20, 2), 1),
+                               (10, 10, (20, 2), 10),
+                               (10, 10, (20, 2), 10),
+                               (10, 10, (200, 2), 10),
+                               (10, 100, (200, 2), 10),
+                               (10, 100, (1000, 2), 10),
+                               (10, 100, (200, 2), 100),
+                               (10, 100, (1000, 2), 100)]
     shapes_4d_strided4d = [((20, 2), (20, 2), (2, 2), (2, 2)),
                            ((20, 2), (20, 2), (20, 2), (2, 2)),
                            ((20, 2), (20, 2), (20, 2), (20, 2)),
@@ -370,39 +394,31 @@ if __name__ == "__main__":
                            #((1000, 2), (200, 2), (200, 2), (20, 2))] # 3G per object
 
     # Remove the case 100 et 1000 elements
-    if True:
-        for x in (shapes_1d,
+    all_shapes = [shapes_1d,
                   shapes_2d,
                   shapes_3d,
                   shapes_4d,
                   shapes_4d_strided_outer_coalesced,
                   shapes_4d_strided_outer,
-                  shapes_4d_strided4d):
+                  shapes_4d_strided_inner,
+                  shapes_4d_strided_middle,
+                  shapes_4d_strided_middle2,
+                  shapes_4d_strided4d]
+    if True:
+        for x in all_shapes:
             x.remove(x[0])
             x.remove(x[0])
 
     # Remove the last case (50000000 elements)
     # as this hide the detail when we have few elements
     if True:
-        for x in (shapes_1d,
-                  shapes_2d,
-                  shapes_3d,
-                  shapes_4d,
-                  shapes_4d_strided_outer_coalesced,
-                  shapes_4d_strided_outer,
-                  shapes_4d_strided4d):
+        for x in all_shapes:
             x.remove(x[-1])
 
     # Remove the shape that take more then 700M of inputs
     # We need a minimum of 1 inputs and 2 outputs!
     if True:
-        for x in (shapes_1d,
-                  shapes_2d,
-                  shapes_3d,
-                  shapes_4d,
-                  shapes_4d_strided_outer_coalesced,
-                  shapes_4d_strided_outer,
-                  shapes_4d_strided4d):
+        for x in all_shapes:
             for shape in x:
                 if numpy.prod([ s if not isinstance(s, (tuple,list)) else s[0] for s in shape])*4>700e6:
                     x.remove(shape)
@@ -439,18 +455,27 @@ if __name__ == "__main__":
 #            ('compyte 4d strided outer coallesced',
 #             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
 #             shapes_4d_strided_outer_coalesced),
-            ('compyte 4d strided outer',
+#            ('compyte 4d strided middle(2d after collapse)',
+#             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+#             shapes_4d_strided_middle),
+#            ('compyte 4d strided middle2(2d after collapse)',
+#             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+#             shapes_4d_strided_middle),
+            ('compyte 4d strided outer(2d after collapse)',
              lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
              shapes_4d_strided_outer),
-            ('compyte 4d strided 4d',
-             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
-             shapes_4d_strided4d),
+#            ('compyte 4d strided inner(1d after collapse)',
+#             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+#             shapes_4d_strided_inner),
+            #('compyte 4d strided 4d',
+            # lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+            # shapes_4d_strided4d),
             ]
 
     for suffix, m in [('_no_alloc', msa2)]:#[('', msa),('_no_alloc', msa2)]:
         make_graph('ap1'+suffix, ap1, msa=m)#, times=times_ap1) # paper
         make_graph('a2pb2p2ab'+suffix, b3, msa=m) # paper
-        make_graph('series'+suffix, series, msa=m)
-        make_graph('apb'+suffix, apb, msa=m)
-        make_graph('2ap3b'+suffix, b2, msa=m)
-        make_graph('2apb10'+suffix, b4, msa=m)
+#        make_graph('series'+suffix, series, msa=m)
+#        make_graph('apb'+suffix, apb, msa=m)
+#        make_graph('2ap3b'+suffix, b2, msa=m)
+#        make_graph('2apb10'+suffix, b4, msa=m)
