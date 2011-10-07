@@ -73,10 +73,10 @@ Each of them implements a different subset of the features that Numpy provides o
 Some implementations support only vectors or matrices, some support only \emph{float32}\footnote{
 \emph{float32} corresponds to single precision floating point numbers.
 }, or only contiguous memory layout (no strides), etc$\ldots$
-None of them targets simultaneously CUDA and OpenCL bookends.
+None of them targets simultaneously CUDA and OpenCL backends.
 
 Our objective was to design a more flexible common GPU n-dimensional array object, 
-without the limitation's of current implementations, and with the hope that it may become largely adopted. 
+without the limitations of current implementations, and with the hope that it may become largely adopted. 
 Our specific goals for this design were:
 
 \begin{itemize}
@@ -110,7 +110,7 @@ We believe that if we provide such optimized functions for element-wise and redu
 Theano is the system that provides the closest approximation of a GPU tensor. 
 According to its web site Theano~\citep{bergstra+al:2010-scipy} is: ``a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently''.
 
-It implements a GPU tensor with strides and broadcasting, but supports only float32 and only the CUDA back-end.
+It implements a GPU tensor with strides and broadcasting, but supports only float32 and the CUDA back-end.
 Also, the strides information are stored differently than numpy.
 Theano stores the number of elements to skip to access the next element and numpy stores the number of bytes to skip.
 
