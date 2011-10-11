@@ -67,8 +67,8 @@ Python: CudaNdarray(Theano)~\citep{bergstra+al:2010-scipy},
 GPUArray(PyCUDA)~\citep{kloeckner_pycuda_2009},
 GPUArray(PyOpenCL)~\citep{kloeckner_pycuda_2009} and
 CUDAMatrix(cudamat)~\citep{cudamat-TR2009}. 
-There are also other implementations like Trust~\citep{Thrust} in C++. 
-One problem is that they are incompatible with each other. 
+There are also other implementations like Thrust~\citep{Thrust} in C++.
+One problem is that they are incompatible with each other.
 Each of them implements a different subset of the features that Numpy provides on the CPU.
 Some implementations support only vectors or matrices, some support only \emph{float32}\footnote{
 \emph{float32} corresponds to single precision floating point numbers.
@@ -136,8 +136,8 @@ It works only with contiguous n-dimensional arrays and does not support strides.
 It also adds support for the boolean type by using 1.0 and 0.0 in floating point to represent true and false, respectively. 
 It also supports broadcasting via the numpy syntax.
 
-\subsection{Trust}
-Trust~\citep{Thrust} is a C++ template library.
+\subsection{Thrust}
+Thrust~\citep{Thrust} is a C++ template library.
 It provides a vector object for CUDA.
 It supports all data types, but only one dimensional vectors.
 This means no broadcasting and no strides.
