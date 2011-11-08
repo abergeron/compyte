@@ -334,7 +334,140 @@ b4 = bench("2*a + b**10", a=((100,),), b=((100,),))
 series = bench("2*sin(a)-sin(2*a)+2/3.0*sin(3*a)-1/2.0*sin(4*a)+2/5.0*sin(5*a)-1/3.0*sin(6*a)+2/7.0*sin(7*a)",
                a=((100,), (1000,), (100, 200)))
 
+
+def gen_submited_paper_pdf():
+    ap1_no_alloc_submit_biglearn_paper = {
+        'pycuda': [2.263465166091919e-05, 2.2561240196228026e-05, 5.0088729858398435e-05, 0.00024293808937072753, 0.00048887078762054439],
+        'compyte 1d contiguous': [4.8440003395080566e-05, 4.8550620079040524e-05, 5.4675912857055667e-05, 0.00027481579780578615, 0.00056338310241699219],
+        'compyte 4d contiguous': [6.9326648712158203e-05, 6.9620189666748047e-05, 7.0056605339050297e-05, 0.00027470300197601316, 0.00056341369152069088],
+        'compyte 4d contiguous not collapsed': [9.3558812141418462e-05, 9.4482517242431646e-05, 0.00029041900634765627, 0.00144551682472229, 0.002890136957168579],
+        'compyte 4d strided outer(2d after collapse)': [8.9702391624450685e-05, 9.054498672485351e-05, 0.00010384140014648437, 0.00051974868774414061, 0.00092990517616271969],
+        }
+
+    a2pb2p2ab_no_alloc_no_alloc_submit_biglearn_paper = {
+        'pycuda': [2.3609220981597899e-05, 2.3830621242523194e-05, 9.885969161987305e-05, 0.00047158560752868654, 0.00093993830680847172],
+        'compyte 1d contiguous': [5.5107808113098146e-05, 5.5577740669250487e-05, 0.00011780040264129639, 0.00053009800910949702, 0.0010585570335388183],
+        'compyte 4d contiguous': [8.4473395347595213e-05, 8.4439301490783696e-05, 0.00011779539585113526, 0.00053011291027069086, 0.0010585739612579345],
+        'compyte 4d contiguous not collapsed': [0.00012182121276855469, 0.0001221674919128418, 0.00034283380508422852, 0.0016802849769592286, 0.0033540680408477783],
+        'compyte 4d strided outer(2d after collapse)': [0.00011260590553283692, 0.00011380398273468018, 0.00021288449764251708, 0.00092618393898010257, 0.0018587779998779296],
+        }
+
+    shapes_1d = [(100,), (1000,), (10000,), (100000,), (1000000,), (5000000,), (10000000,), (50000000,)]
+    shapes_2d = [(10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000),
+                 (5000, 1000), (10000, 1000), (50000, 1000)]
+    shapes_3d = [(10, 10, 1), (10, 10, 10), (100, 10, 10), (100, 100, 10),
+                 (100, 100, 100), (500, 100, 100), (1000, 100, 100),
+                 (5000, 100, 100)]
+    shapes_4d = [(10, 10, 1, 1), (10, 10, 10, 1), (10, 10, 10, 10),
+                 (100, 10, 10, 10), (100, 100, 10, 10), (500, 100, 10, 10),
+                 (100, 100, 100, 10), (500, 100, 100, 10)]
+    shapes_4d_strided_outer_coalesced = [((8, 2), 1, 1, 32),
+                                         ((8, 2), 10, 1, 32),
+                                         ((8, 2), 10, 10, 32),
+                                         ((62, 2), 10, 10, 32),
+                                         ((62, 2), 100, 10, 32),
+                                         ((312, 2), 100, 10, 32),
+                                         ((62, 2), 100, 100, 32),
+                                         ((312, 2), 100, 100, 32)]
+    shapes_4d_strided_outer = [((20, 2), 10, 1, 1),
+                               ((20, 2), 10, 10, 1),
+                               ((20, 2), 10, 10, 10),
+                               ((200, 2), 10, 10, 10),
+                               ((200, 2), 100, 10, 10),
+                               ((1000, 2), 100, 10, 10),
+                               ((200, 2), 100, 100, 10),
+                               ((1000, 2), 100, 100, 10)]
+    shapes_4d_strided_inner = [(10, 10, 1, (20, 2)),
+                               (10, 10, 10, (20, 2)),
+                               (10, 10, 10, (20, 2)),
+                               (10, 10, 10, (200, 2)),
+                               (10, 100, 10, (200, 2)),
+                               (10, 100, 10, (1000, 2)),
+                               (10, 100, 100, (200, 2)),
+                               (10, 100, 100, (1000, 2))]
+    shapes_4d_strided_middle = [(10, (20, 2), 10, 1),
+                               (10, (20, 2), 10, 10),
+                               (10, (20, 2), 10, 10),
+                               (10, (200, 2), 10, 10),
+                               (10, (200, 2), 100, 10),
+                               (10, (1000, 2), 100, 10),
+                               (10, (200, 2), 100, 100),
+                               (10, (1000, 2), 100, 100)]
+    shapes_4d_strided_middle2 = [(10, 10, 1, (20, 2), 1),
+                               (10, 10, (20, 2), 10),
+                               (10, 10, (20, 2), 10),
+                               (10, 10, (200, 2), 10),
+                               (10, 100, (200, 2), 10),
+                               (10, 100, (1000, 2), 10),
+                               (10, 100, (200, 2), 100),
+                               (10, 100, (1000, 2), 100)]
+    shapes_4d_strided4d = [((20, 2), (20, 2), (2, 2), (2, 2)),
+                           ((20, 2), (20, 2), (20, 2), (2, 2)),
+                           ((20, 2), (20, 2), (20, 2), (20, 2)),
+                           ((200, 2), (20, 2), (20, 2), (20, 2)),
+                           ((200, 2), (200, 2), (20, 2), (20, 2)),
+                           ((1000, 2), (200, 2), (20, 2), (20, 2)),
+                           ((200, 2), (200, 2), (200, 2), (20, 2)),
+                           ]
+                           #((1000, 2), (200, 2), (200, 2), (20, 2))] # 3G per object
+
+    # Remove the case 100 et 1000 elements
+    all_shapes = [shapes_1d,
+                  shapes_2d,
+                  shapes_3d,
+                  shapes_4d,
+                  shapes_4d_strided_outer_coalesced,
+                  shapes_4d_strided_outer,
+                  shapes_4d_strided_inner,
+                  shapes_4d_strided_middle,
+                  shapes_4d_strided_middle2,
+                  shapes_4d_strided4d]
+    if True:
+        for x in all_shapes:
+            x.remove(x[0])
+            x.remove(x[0])
+
+    # Remove the last case (50000000 elements)
+    # as this hide the detail when we have few elements
+    if True:
+        for x in all_shapes:
+            x.remove(x[-1])
+
+    # Remove the shape that take more then 700M of inputs
+    # We need a minimum of 1 inputs and 2 outputs!
+    if True:
+        for x in all_shapes:
+            for shape in x:
+                if numpy.prod([ s if not isinstance(s, (tuple,list)) else s[0] for s in shape])*4>700e6:
+                    x.remove(shape)
+
+    msa2 = [('pycuda',
+             lambda b, vals, ref: b.try_pycuda(vals, reuse_output=True, ref=ref),
+             shapes_1d),
+            ('compyte 1d contiguous',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_1d),
+            ('compyte 4d contiguous',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_4d),
+            ('compyte 4d contiguous not collapsed',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref, collapse=False),
+             shapes_4d),
+            ('compyte 4d strided outer(2d after collapse)',
+             lambda b, vals, ref: b.try_compyte(vals, reuse_output=True, ref=ref),
+             shapes_4d_strided_outer),
+            ]
+
+    for suffix, m in [('_no_alloc', msa2)]:
+        make_graph('ap1'+suffix, ap1, msa=m, times=ap1_no_alloc_submit_biglearn_paper) # paper submited
+        make_graph('a2pb2p2ab'+suffix, b3, msa=m, times=a2pb2p2ab_no_alloc_no_alloc_submit_biglearn_paper) # paper
+
+
 if __name__ == "__main__":
+    if False:
+        gen_submited_paper_pdf()
+        sys.exit()
+
     shapes_1d = [(100,), (1000,), (10000,), (100000,), (1000000,), (5000000,), (10000000,), (50000000,)]
     shapes_2d = [(10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000),
                  (5000, 1000), (10000, 1000), (50000, 1000)]
