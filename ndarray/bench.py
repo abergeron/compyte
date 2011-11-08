@@ -278,7 +278,7 @@ def prod(seq):
     return s
 
 MARKERS = ['+', '*', ',', '.', '1', '2', '3', '4', '<', '>', 'D', 'H', '^', '_', 'd', 'h', 'o', 'p', 's', 'v', 'x', '|']
-COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'k', 'grey', 'orange', 'amber', 'purple', 'pink', '#FFAABB', '#FFAAFF']
+COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'grey', 'yellow', 'k', 'orange', 'amber', 'purple', 'pink', '#FFAABB', '#FFAAFF']
 ##FFAABB, #FFAAFF
 def make_graph(name, b, msa, times={}):
     ext = 'pdf'
