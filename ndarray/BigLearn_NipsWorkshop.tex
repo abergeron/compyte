@@ -77,17 +77,17 @@ None of them targets simultaneously CUDA and OpenCL backends.
 
 Our objective was to design a more flexible common GPU n-dimensional array object, 
 without the limitations of current implementations, and with the hope that it may become largely adopted. 
-Our specific goals for this design were:
+Our specific goals for this design were to:
 
 \begin{itemize}
-\item Makes a n-dimensional array base object on the GPU that supports \emph{strides} and \emph{broadcasting}
-\item Has a Python interface similar to numpy.ndarray (to make it more seamless and appealing to the Python community).
-\item Makes the development of efficient specialized operations with this n-dimensional array no harder than with more restricted array objects.
-\item Has the base object in C to allow collaboration with other non-Python projects (so that people from C, C++, ruby, R, etc... may use the same low-level base GPU ndarray).
-\item Is compatible with CUDA and OpenCL
+\item Make a n-dimensional array base object on the GPU that supports \emph{strides} and \emph{broadcasting}
+\item Have a Python interface similar to numpy.ndarray (to make it more seamless and appealing to the Python community).
+\item Make the development of efficient specialized operations with this n-dimensional array no harder than with more restricted array objects.
+\item Have the base object in C to allow collaboration with other non-Python projects (so that people from C, C++, ruby, R, etc... may use the same low-level base GPU ndarray).
+\item Be compatible with CUDA and OpenCL
 \end{itemize}
 
-We believe that for an arbitrary-dimensional array is a basic GPU object and that a common implementation is required.
+We believe that an arbitrary-dimensional array is a basic GPU object and that a common implementation is required.
 Lacking such a basic object, programmers face added complexity when dealing with algorithms that need more dimensions than what is provided.
 Having the base object support n-dimensions eliminates this complexity.
 We believe that there are several reasons why there has not yet been a common GPU implementation fulfilling our objectives.
@@ -102,7 +102,7 @@ In order to offset this cost, automatic optimizations like the collapsing of dim
 This is currently implemented for element-wise operations as discussed in section~\ref{sec:currentimpl}.
 
 We believe that if we provide such optimized functions for element-wise and reduction operations, we will cover enough cases where the conversion from one memory layout to another can be combined with computations.
-\footnote{This can still impact the performance due coalescing constraints(the hardware have different speed for different memory access pattern) , but we don't expect that to be significant most of the time.}
+\footnote{This can still impact the performance due coalescing constraints (the hardware has different speeds for different memory access patterns) , but we don't expect that to be significant most of the time.}
 
 \section{Existing GPU array implementations}
 \subsection{Theano}
@@ -120,7 +120,7 @@ They also automatically translate errors to Python exceptions.
 
 Their GPU array objects are limited to contiguous memory regions.
 They add shape properties to allow using this contiguous memory region as n-dimensional array.
-They don't support strides nor broadcasting, but they support many data types other then float32.
+They don't support strides nor broadcasting, but they support many data types other than float32.
 
 \subsection{CUDAMat}
 On the CUDAMat~\citep{cudamat-TR2009} website we find the following mission statement: ``The aim of the cudamat project is to make it easy to perform basic matrix calculations on CUDA-enabled GPUs from Python. cudamat provides a Python matrix class that performs calculations on a GPU.''
@@ -144,7 +144,7 @@ This means no broadcasting and no strides.
 \subsection{Summary regarding existing implementations}
 We see clearly that none of these implementations offer all of what we would like for a flexible numpy-like common GPU tensor.
 As the Theano implementation supports strides and that it is easier to add other types than to add strides support, we used much of its code as a starting point for our implementation.
-Theano also implemented some optimizations to indexing computation to lower the performance loss of having more dimensions.
+Theano also implemented some optimizations of indexing computations to lower the performance loss of having more dimensions.
 
 \section{Current state of our common GPU array implementation}
 \label{sec:currentimpl}
