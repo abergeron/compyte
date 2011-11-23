@@ -184,10 +184,10 @@ They were measured on a GeForce GTX 580.
 \includegraphics[width=0.495\textwidth]{a2pb2p2ab_no_alloc}
 
 We can conclude from these benchmarks that we have a bigger base computational cost than PyCUDA, but that this base cost is not significant when the number of elements is large.
-We can see the speedup that is brought by the dimension collapsing by comparing the "compyte 4d contiguous" and "compyte 4d contiguous not collapsed" lines.
+We can see the speedup that is brought by the dimension collapsing by comparing the "gpu nd array 4d contiguous" and "gpu nd array 4d contiguous not collapsed" lines.
 
 Normally on the GPU, one would expect strided access to be rather slower.
-However "compyte 4d strided outer" (collapsed to 2 dimensions, with strides) is significantly faster then "compyte 4d contiguous not collapsed (4 dimensions without strides)".
+However "gpu nd array 4d strided outer" (collapsed to 2 dimensions, with strides) is significantly faster then "gpu nd array 4d contiguous not collapsed (4 dimensions without strides)".
 In this case we see that strides computation has a lower overhead than uncollapsed plain indexing.
 We don't currently use implicit loops in CUDA; doing so would help lower this index computation cost.
 
