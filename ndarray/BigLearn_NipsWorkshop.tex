@@ -149,11 +149,13 @@ Theano also implemented some optimizations of indexing computations to lower the
 \section{Current state of our common GPU array implementation}
 \label{sec:currentimpl}
 We currently have all the code implemented and working for CUDA.
-OpenCL implementation is underway, but currently incomplete.
+OpenCL implementation is working except that we copy only contiguous
+memory region.
 
 \subsection{Functionality}
 
-The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels.
+The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels. We started the implementation of the reduction in CUDA.
+
 In order to support multiple back-ends (CUDA, OpenCL, ...) we have created a list of utility functions that are to be implemented for each 
 while the rest of the code is shared.
 
@@ -161,7 +163,7 @@ The back-end-independent parts take care of indexing, making views, and provide 
 This is the part that supports any (valid) combination of dimensions and strides.
 Most importantly, the dimension collapsing optimizations are device-independent and can be reused between back ends.
 
-We are still missing some items before we reach full numpy compatibility, most importantly reductions, setting a part of the array via assignation and reshaping.
+We are still missing some items before we reach full numpy compatibility, most importantly reductions, setting a part of the array via assignation, reshaping, transpose and n-dimensional transpose.
 
 \subsection{Element-wise dimensions collapsing}
 
