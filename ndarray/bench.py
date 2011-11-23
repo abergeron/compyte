@@ -317,7 +317,7 @@ COLORS = ['blue', 'green', 'red', 'cyan', 'magenta', 'grey', 'yellow',
 
 
 ##FFAABB, #FFAAFF
-def make_graph(name, b, msa, times={}):
+def make_graph(name, b, msa, times={}, can_exec=True):
     ext = 'pdf'
     import matplotlib
     matplotlib.use(ext, warn=False)  # maybe Agg or Cairo
@@ -340,6 +340,7 @@ def make_graph(name, b, msa, times={}):
                         vals_strides.values()[0][0].shape) /
                               vals_strides.values()[0][1]))
             if lbl not in times:
+                assert can_exec
                 #ref = b.numpy(**vals)
                 ref = None
                 yvals.append(m(b, vals_strides, ref=ref))
@@ -533,8 +534,12 @@ def gen_submited_paper_pdf():
             ]
 
     for suffix, m in [('_no_alloc', msa2)]:
-        make_graph('ap1'+suffix, ap1, msa=m, times=ap1_no_alloc_submit_biglearn_paper) # paper submited
-        make_graph('a2pb2p2ab'+suffix, b3, msa=m, times=a2pb2p2ab_no_alloc_no_alloc_submit_biglearn_paper) # paper
+        make_graph('ap1' + suffix, ap1, msa=m,
+                   times=ap1_no_alloc_submit_biglearn_paper,
+                   can_exec=False)
+        make_graph('a2pb2p2ab' + suffix, b3, msa=m,  # paper
+                   times=a2pb2p2ab_no_alloc_no_alloc_submit_biglearn_paper,
+                   can_exec=False)
 
 
 if __name__ == "__main__":
