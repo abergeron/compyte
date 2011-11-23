@@ -543,9 +543,13 @@ def gen_submited_paper_pdf():
 
 
 if __name__ == "__main__":
-    if False:
+    assert len(sys.argv) == 2
+
+    if sys.argv[-1] == "--submited":
         gen_submited_paper_pdf()
         sys.exit()
+    else:
+        assert sys.argv[-1] == "--run"
 
     shapes_1d = [(100,), (1000,), (10000,), (100000,), (1000000,), (5000000,), (10000000,), (50000000,)]
     shapes_2d = [(10, 10), (100, 10), (100, 100), (1000, 100), (1000, 1000),
