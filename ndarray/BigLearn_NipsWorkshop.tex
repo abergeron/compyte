@@ -154,7 +154,7 @@ memory region.
 
 \subsection{Functionality}
 
-The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels. We started the implementation of the reduction in CUDA.
+The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels with dimensions collapsing. We started the implementation of the reduction in CUDA. We have done reduction over all axis or over 1 axis when the input have 1, 2 or 3 dimensions after dimensions collapsing.
 
 In order to support multiple back-ends (CUDA, OpenCL, ...) we have created a list of utility functions that are to be implemented for each 
 while the rest of the code is shared.
@@ -168,7 +168,7 @@ We are still missing some items before we reach full numpy compatibility, most i
 \subsection{Element-wise dimensions collapsing}
 
 To lower the indexing computation cost incurred with the increasing number of dimensions, we can try to \emph{collapse} consecutive dimensions for the purpose of doing element-wise computations.
-For example, if we add tensors that are C-contiguous, we can use the same kernel for all dimensions (effectively collapsing any number of dimensions to 1) since the result will be the same.
+For example, if we add tensors that are both C-contiguous(row-major) or f-contiguous(column-major), we can use the same kernel for all dimensions (effectively collapsing any number of dimensions to 1) since the result will be the same.
 This way,  we avoid most of the index computations.
 
 In general, any non-strided dimension can be collapsed leaving only the index for the strided dimensions to be computed in the kernel.
