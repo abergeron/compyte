@@ -161,7 +161,7 @@ The back-end-independent parts take care of indexing, making views, and provide 
 This is the part that supports any (valid) combination of dimensions and strides.
 Most importantly, the dimension collapsing optimizations are device-independent and can be reused between back ends.
 
-We started the implementation of reductions in CUDA.
+We started the implementation of sum reductions in CUDA.
 We have done reductions over all axis or over 1 axis when the input have 1, 2 or 3 dimensions after dimension collapsing.
 
 We are still missing some items before we reach full numpy compatibility, most importantly setting a part of the array via assignation and reshaping.
