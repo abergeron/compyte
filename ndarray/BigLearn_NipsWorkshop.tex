@@ -149,13 +149,11 @@ Theano also implemented some optimizations of indexing computations to lower the
 \section{Current state of our common GPU array implementation}
 \label{sec:currentimpl}
 We currently have all the code implemented and working for CUDA.
-OpenCL implementation is working except that we copy only contiguous
-memory region.
+The OpenCL implementation is only missing the copy of non-contiguous memory regions.
 
 \subsection{Functionality}
 
-The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels with dimensions collapsing. We started the implementation of the reduction in CUDA. We have done reduction over all axis or over 1 axis when the input have 1, 2 or 3 dimensions after dimensions collapsing.
-
+The current base code can allocate arrays, transfer data to and from the CPU, create views of that data (such as sub-arrays with strides) and run element-wise kernels with dimensions collapsing.
 In order to support multiple back-ends (CUDA, OpenCL, ...) we have created a list of utility functions that are to be implemented for each 
 while the rest of the code is shared.
 
@@ -163,7 +161,10 @@ The back-end-independent parts take care of indexing, making views, and provide 
 This is the part that supports any (valid) combination of dimensions and strides.
 Most importantly, the dimension collapsing optimizations are device-independent and can be reused between back ends.
 
-We are still missing some items before we reach full numpy compatibility, most importantly reductions, setting a part of the array via assignation, reshaping, transpose and n-dimensional transpose.
+We started the implementation of reductions in CUDA.
+We have done reductions over all axis or over 1 axis when the input have 1, 2 or 3 dimensions after dimension collapsing.
+
+We are still missing some items before we reach full numpy compatibility, most importantly setting a part of the array via assignation and reshaping.
 
 \subsection{Element-wise dimensions collapsing}
 
@@ -189,7 +190,7 @@ We can conclude from these benchmarks that we have a bigger base computational c
 We can see the speedup that is brought by the dimension collapsing by comparing the "gpu nd array 4d contiguous" and "gpu nd array 4d contiguous not collapsed" lines.
 
 Normally on the GPU, one would expect strided access to be rather slower.
-However "gpu nd array 4d strided outer" (collapsed to 2 dimensions, with strides) is significantly faster then "gpu nd array 4d contiguous not collapsed (4 dimensions without strides)".
+However "gpu nd array 4d strided outer" (collapsed to 2 dimensions, with strides) is significantly faster then "gpu nd array 4d contiguous not collapsed" (4 dimensions without strides).
 In this case we see that strides computation has a lower overhead than uncollapsed plain indexing.
 We don't currently use implicit loops in CUDA; doing so would help lower this index computation cost.
 
