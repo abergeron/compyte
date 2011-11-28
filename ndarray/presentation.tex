@@ -62,7 +62,6 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end{frame}
 
 \begin{frame}{Strides}
-% pretty picture is better
 \begin{itemize}
 \item Represents the number of bytes to skip to get to the next element
 \item Allows taking a view of e.g. only the odd columns of a matrix without copying any data
@@ -81,11 +80,21 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end{frame}
 
 \begin{frame}{Broadcasting}
-% pretty picture would be infinitely better
 \begin{itemize}
 \item This is a way to fill a dimension with copies of itself
 \item Example: multiplying each row of a matrix by a vector
 \end{itemize}
+\end{frame}
+
+\begin{frame}{Broadcasting (example)}
+\only<1>{We have matrix ${\color{red!50}A}$ of size (8,8) and we want to multiply it by vector ${\color{cyan!50}B}$ of size (8,1).}
+\only<2>{So we make virtual copies of ${\color{cyan!50}B}$ along the last dimension until it has the same size as ${\color{red!50}A}$.}
+\begin{center}
+\only<1>{\includegraphics[width=0.9\textwidth]{bcast-1}}
+\only<2>{\includegraphics[width=0.9\textwidth]{bcast-2}}
+\end{center}
+\only<1>{This doesn't fit the rules for elementwise operations since both objects do not have the same number of elements.}
+\only<2>{Then we can proceed as usual.  Fixing things this way is often a very useful tool when doing some computations.}
 \end{frame}
 
 \begin{frame}{Why has this not been done before?}
@@ -141,7 +150,7 @@ Desired & yes & yes & any & all & both \\
 \end{frame}
 
 \subsection{Element-wise dimension collapsing}
-% Pretty pictures would be better
+% pretty pictures would be better
 \begin{frame}{Dimension collapsing}
 \begin{itemize}
 \item Computing indexes takes time
