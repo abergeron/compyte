@@ -1,6 +1,7 @@
 \documentclass[utf8x,xcolor=pdftex,dvipsnames,table]{beamer}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath}
+\usepackage[utf8x]{inputenc}
 
 \mode<presentation>
 
@@ -89,7 +90,7 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 
 \begin{frame}{Why has this not been done before?}
 \begin{itemize}
-\item Hard and time consuming to get right
+\item Hard and time consuming to get right and efficent
 \item Certain algorithms cannot work on a general memory layout
 \item Indexing computations take up a significant portion of time on the GPU
 \end{itemize}

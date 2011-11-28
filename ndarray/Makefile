@@ -34,3 +34,11 @@ BigLearn_NipsWorkshop.pdf: BigLearn_NipsWorkshop.tex ap1_no_alloc.pdf a2pb2p2ab_
 	pdflatex BigLearn_NipsWorkshop
 	bibtexall
 	pdflatex BigLearn_NipsWorkshop
+
+presentation.pdf: presentation.tex ap1_no_alloc.pdf a2pb2p2ab_no_alloc.pdf
+	#latex BigLearn_NipsWorkshop.tex
+	#dvipdf latex BigLearn_NipsWorkshop
+	pdflatex presentation
+	pdflatex presentation
+	bibtexall
+	pdflatex presentation
