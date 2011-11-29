@@ -5,7 +5,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{amsmath}
 \usepackage[utf8x]{inputenc}
-\logo{\includegraphics[width=.8in]{UdeM_NoirBleu_logo_Marie_crop.pdf}}
+\logo{\includegraphics[width=.8in]{UdeM_NoirBleu_logo_Marie_crop}}
 
 \mode<presentation>
 
@@ -30,13 +30,10 @@ Montréal, Canada \newline
  \titlepage
  \includegraphics[width=1in]{lisabook_logo_text_3.png}
  \hfill
- \includegraphics[width=.8in]{UdeM_NoirBleu_logo_Marie_crop.pdf}
+ \includegraphics[width=.8in]{UdeM_NoirBleu_logo_Marie_crop}
 \end{frame}
-\addtocounter{framenumber}{-1}
 
-%\begin{frame}{Outline}
-% \tableofcontents
-%\end{frame}
+\setcounter{page}{1}
 
 \section{Motivation}
 
@@ -158,12 +155,10 @@ Desired & yes & yes & any & all & both \\
 \end{frame}
 
 \begin{frame}{Missing Functionality}
-\begin{block}{What we miss}
 \begin{itemize}
 \item assignation
 \item reshaping
 \end{itemize}
-\end{block}
 \end{frame}
 
 \subsection{Element-wise dimension collapsing}
@@ -194,8 +189,8 @@ Desired & yes & yes & any & all & both \\
 \item<3-> Find ways to lower the overhead
 \item<4-> Use the implicit looping provided by CUDA and OpenCL
 \item<5-> World domination!
-\item<6-> ???
-\item<7-> Profit
+\item<5-> ???
+\item<5-> Profit
 \end{itemize}
 \end{frame}
 
@@ -206,7 +201,6 @@ Desired & yes & yes & any & all & both \\
 \end{itemize}
 \end{frame}
 
-%%\section*{Questions}
 \begin{frame}
 \begin{center}
 \Huge
