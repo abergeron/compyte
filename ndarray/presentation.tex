@@ -58,6 +58,7 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end{enumerate}
 \end{frame}
 
+\section{Features}
 \begin{frame}{Features desired}
 \begin{itemize}
 \item Support for varying datatypes
@@ -128,6 +129,7 @@ Desired & yes & yes & any & all & both \\
 \begin{frame}{Functionality}
 \begin{block}{What we have}
 \begin{itemize}
+\item all the feature wanted: strides, bcast, dims, types, backends
 \item allocation, transfer
 \item views
 \item elementwise kernels
@@ -135,6 +137,15 @@ Desired & yes & yes & any & all & both \\
 \item support for CUDA and OpenCL
 \end{itemize}
 \end{block}
+\begin{block}{Interface}
+\begin{itemize}
+\item Python
+\item C++ interface similar to Numpy C-API
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Missing Functionality}
 \begin{block}{What we miss}
 \begin{itemize}
 \item assignation
