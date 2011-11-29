@@ -100,6 +100,18 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end{itemize}
 \end{frame}
 
+\begin{frame}{Easy to develop}
+\begin{itemize}
+\item Not always a good idea to make a gpu code work for all memory layout.
+  \begin{itemize}
+  \item Harder to code
+  \item Harder to get efficient
+  \end{itemize}
+\item Just call \begin{bf}as\_\{contiguous,fortran\}\_memory()\end{bf}
+ on inputs!
+\end{itemize}
+\end{frame}
+
 \section{Exisiting Implementations}
 
 \begin{frame}{Comparison of existing implementations}
