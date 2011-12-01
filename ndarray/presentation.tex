@@ -78,7 +78,7 @@ ${\color{cyan!50}B} = {\color{red!50}A}$\texttt{[:,::}2\texttt{]} \texttt{\#} Gi
 \end{frame}
 
 \begin{frame}{Broadcasting}
-\only<1>{We have matrix ${\color{red!50}A}$ of size (8,8) and we want to multiply it by vector ${\color{cyan!50}B}$ of size (8,1).}
+\only<1>{We have matrix ${\color{red!50}A}$ of size (8,8) and we want to add vector ${\color{cyan!50}B}$ of size (8,1) to it.}
 \only<2>{So we make virtual copies of ${\color{cyan!50}B}$ along the last dimension until it has the same size as ${\color{red!50}A}$.}
 \begin{center}
 \only<1>{\includegraphics[width=0.9\textwidth]{bcast-1}}
