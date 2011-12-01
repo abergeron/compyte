@@ -161,14 +161,14 @@ Desired & yes & yes & any & all & both \\
 \end{frame}
 
 \subsection{Element-wise dimension collapsing}
-% pretty pictures would be better
-\begin{frame}{Dimension collapsing}
-\begin{itemize}
-\item Computing indexes takes time
-\item On contiguous memory n-d and 1-d are the same for element-wise operations
-\item So we can merge all dimensions into one for the kernel
-\item When dimensions are not all contiguous we can still merge adjacent contiguous ones
-\end{itemize}
+
+\begin{frame}
+\only<1>{Suppose we have some elementwise work to do on a 3d tensor ${\color{cyan!50}B}$ that is a view of ${\color{red!50}A}$, but strided in the innnermost dimension.}
+\only<2>{We can merge the two outer dimensions to obtain an equivalent array that accesses the same memory but with easier indexing.}
+\begin{center}
+\only<1>{\includegraphics[height=0.8\textheight]{3d_hypercude_sliced}}
+\only<2>{\includegraphics[height=0.8\textheight]{3d_hypercude_sliced_reshaped}}
+\end{center}
 \end{frame}
 
 \section{Benchmarks}
