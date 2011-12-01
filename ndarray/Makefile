@@ -35,10 +35,24 @@ BigLearn_NipsWorkshop.pdf: BigLearn_NipsWorkshop.tex ap1_no_alloc.pdf a2pb2p2ab_
 	bibtexall
 	pdflatex BigLearn_NipsWorkshop
 
-presentation.pdf: presentation.tex ap1_no_alloc.pdf a2pb2p2ab_no_alloc.pdf
+presentation.pdf: presentation.tex ap1_no_alloc.pdf a2pb2p2ab_no_alloc.pdf 3d_hypercude_sliced.pdf 3d_hypercude_sliced_reshaped.pdf
 	#latex BigLearn_NipsWorkshop.tex
 	#dvipdf latex BigLearn_NipsWorkshop
 	pdflatex presentation
 	pdflatex presentation
 	bibtexall
 	pdflatex presentation
+
+3d_hypercude_sliced.pdf: presentation_plot.py
+	python presentation_plot.py
+
+3d_hypercude_sliced_reshaped.pdf: presentation_plot.py
+	python presentation_plot.py
+
+poster_nips2011.pdf: poster_nips2011.tex
+	#latex BigLearn_NipsWorkshop.tex
+	#dvipdf latex BigLearn_NipsWorkshop
+	pdflatex poster_nips2011
+	pdflatex poster_nips2011
+	bibtexall
+	pdflatex poster_nips2011
