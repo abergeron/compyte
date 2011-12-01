@@ -74,8 +74,7 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \only<1>{\includegraphics{strides-1}}
 \only<2>{\includegraphics{strides-2}}
 \end{center}
-\only<1>{If we do something like ${\color{cyan!50}B} = {\color{red!50}A}$\texttt{[:,::}2\texttt{]},}
-\only<2>{we get the matrix ${\color{cyan!50}B}$ that shares memory with ${\color{red!50}A}$.}
+${\color{cyan!50}B} = {\color{red!50}A}$\texttt{[:,::}2\texttt{]} \texttt{\#} Gives matrix ${\color{cyan!50}B}$ that shares memory with ${\color{red!50}A}$
 \end{frame}
 
 \begin{frame}{Broadcasting}
