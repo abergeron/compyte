@@ -5,11 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-colors = ('r', 'g', 'b', 'k')
-sizes = (10, 10, 10)
+colors = ('#e0ffff', '#ffc0cb')
 sizes = (5, 5, 5)
 csize = sizes[1] * sizes[2]
-
 
 def print_save(filename):
     if True:
@@ -145,7 +143,7 @@ if True:
     # 3d plane 2 color
     fig = plt.figure()
     ax = Axes3D(fig)
-
+    ax.shade = False
     X, Y, Z = np.mgrid[0:sizes[0]:sizes[0] * 1j,
                        0:sizes[1]:10j,
                        0:sizes[2]:10j]
@@ -164,11 +162,13 @@ if True:
     # 3d plane 2 color reshaped
     fig = plt.figure()
     ax = Axes3D(fig)
+    ax.shade = False
 
     X, Y, Z = np.mgrid[0:sizes[0]:sizes[0] * 1j,
                        0:csize:10j,
                        0:1:10j]
     ax = fig.gca(projection='3d')
+    ax.shade=False
     for i in range(X.shape[0]):
         cset = ax.contour(X[i], Y[0], Z[0], extend3d=True,
                           colors=colors[i % 2])
