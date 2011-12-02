@@ -111,7 +111,7 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 
 \begin{frame}{Why has this not been done before?}
 \begin{itemize}
-\item Hard and time consuming to get right and efficent
+\item Hard and time consuming to get right and efficient
 \item Certain algorithms cannot work on a general memory layout
 \item Indexing computations take up a significant portion of time on the GPU
 \end{itemize}
@@ -158,18 +158,19 @@ Desired & yes & yes & any & all & both \\
 \begin{frame}{Functionality}
 \begin{block}{What we have}
 \begin{itemize}
-\item all the feature wanted: strides, bcast, dims, types, backends
-\item allocation, transfer
-\item views
+\item data types
+\item dimensions
+\item strides, views
+\item broadcasting
 \item elementwise kernels
 \item partial reductions
 \item support for CUDA and OpenCL
 \end{itemize}
 \end{block}
-\begin{block}{Interface}
+\begin{block}{Interfaces}
 \begin{itemize}
 \item Python
-\item C++ interface similar to Numpy C-API
+\item C++ interface similar to Numpy C-API (depends on python)
 \end{itemize}
 \end{block}
 \end{frame}
@@ -178,6 +179,7 @@ Desired & yes & yes & any & all & both \\
 \begin{itemize}
 \item assignation
 \item reshaping
+\item a clean C interface
 \end{itemize}
 \end{frame}
 
