@@ -89,14 +89,24 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end{frame}
 
 \begin{frame}{Broadcasting}
-\only<1>{We have matrix ${\color{red!50}A}$ of size (8,8) and we want to add vector ${\color{cyan!50}B}$ of size (8,1) to it.}
-\only<2>{So we make virtual copies of ${\color{cyan!50}B}$ along the last dimension until it has the same size as ${\color{red!50}A}$.}
+\only<1>{We have matrix ${\color{red!50}A}$ (size [8,8]) and we want to add a bias vector ${\color{cyan!50}b}$ (size [8,1]) to it.}
+\only<2>{So we make virtual copies of ${\color{cyan!50}b}$ along the last dimension until it has the same size as ${\color{red!50}A}$.}
 \begin{center}
 \only<1>{\includegraphics[width=0.9\textwidth]{bcast-1}}
 \only<2>{\includegraphics[width=0.9\textwidth]{bcast-2}}
 \end{center}
 \only<1>{This doesn't fit the rules for elementwise operations since both objects do not have the same number of elements.}
-\only<2>{Then we can proceed as usual.  Fixing things this way is often a very useful tool when doing some computations.}
+\only<2>{Then we can proceed as usual for elementwise. \\ \ }
+\end{frame}
+
+\begin{frame}{Features desired}
+\begin{itemize}
+\item Support for varying datatypes
+\item Support for an arbitrary number of dimensions
+\item Support for strides
+\item Support for broadcasting
+\item Compatibility with CUDA and OpenCL
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Why has this not been done before?}
