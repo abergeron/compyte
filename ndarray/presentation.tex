@@ -67,6 +67,8 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end{frame}
 
 \begin{frame}{Strides}
+\only<1>{Strides is a way to specify how much memory to skip between each element of a dimension.}
+\only<2>{We can use strides to take submatrix ${\color{cyan!50}B}$ without copying any memory.}
 \begin{center}
 \onslide<1->{Matrix ${\color{red!50}A}$}\hspace{5em}\onslide<2->{Matrix ${\color{cyan!50}B}$}
 \end{center}
@@ -74,7 +76,16 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \only<1>{\includegraphics{strides-1}}
 \only<2>{\includegraphics{strides-2}}
 \end{center}
-${\color{cyan!50}B} = {\color{red!50}A}$\texttt{[:,::}2\texttt{]} \texttt{\#} Gives matrix ${\color{cyan!50}B}$ that shares memory with ${\color{red!50}A}$
+\end{frame}
+
+\begin{frame}{Features desired}
+\begin{itemize}
+\item Support for varying datatypes
+\item Support for an arbitrary number of dimensions
+\item Support for strides
+\item Support for broadcasting
+\item Compatibility with CUDA and OpenCL
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Broadcasting}
