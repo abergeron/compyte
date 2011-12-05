@@ -16,17 +16,22 @@
 \usepackage{verbatim}
 %\documentstyle[nips10submit_09,times,art10]{article} % For LaTeX 2.09
 
+\newcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
 
 \title{A Common GPU n-Dimensional Array \\
  for Python and C}
 
 
 \author{
-Frédéric Bastien, Arnaud Bergeron, Pascal Vincent and Yoshua Bengio \\
-D\'epartement d'Informatique et de Recherche Op\'erationnelle\\
+Frédéric Bastien\superscript{a}, Arnaud Bergeron\superscript{a}, Andreas Klöckner\superscript{b}, Pascal Vincent\superscript{a} and Yoshua Bengio\superscript{a} \\
+\superscript{a}D\'epartement d'Informatique et de Recherche Op\'erationnelle\\
 Universit\'e de Montr\'eal\\
 Montr\'eal, Canada \\
 \texttt{\{bastienf, bergearn, vincentp, bengioy\}@iro.umontreal.ca} \\
+\superscript{b}Courant Institure of Mathematical Sciences \\
+New York University\\
+New York, NY 10012, USA\\
+\texttt{kloeckner@cims.nyu.edu} \\
 }
 
 % The \author macro works with any number of authors. There are two commands
@@ -223,7 +228,7 @@ We hope that people can appreciate the potential benefits that such a common GPU
 
 \subsubsection*{Acknowledgments}
 
-We want to thank James Bergstra. We used some of his code as the first version of some of the functionalities currently implemented. We thank Andreas Kloeckner for his support and useful discussions. We would also like to acknowledge Compute Canada, RQCHP, NSERC, and Canada Research Chairs for providing funds or access to compute resources.
+We want to thank James Bergstra. We used some of his code as the first version of some of the functionalities currently implemented. We would also like to acknowledge Compute Canada, RQCHP, NSERC, and Canada Research Chairs for providing funds or access to compute resources.
 
 
 \bibliography{strings,strings-shorter,ml,aigaion-shorter}
