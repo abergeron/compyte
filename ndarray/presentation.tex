@@ -196,6 +196,14 @@ Desired & yes & yes & any & all & both \\
 \subsection{Element-wise dimension collapsing}
 
 \begin{frame}
+\begin{itemize}
+\item Indexing computations are expensive
+\item The cost is paid per dimension (irrespective of their size)
+\item We have an optimization that can help alleviate the costs
+\end{itemize}
+\end{frame}
+
+\begin{frame}
 \only<1>{Suppose we have some elementwise work to do on a 3d tensor ${\color{cyan!50}B}$ that is a view of ${\color{red!50}A}$, but strided in the innnermost dimension.}
 \only<2>{We can merge the two outer dimensions to obtain an equivalent array that accesses the same memory but with easier indexing.}
 \begin{center}
