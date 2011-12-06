@@ -49,10 +49,10 @@ presentation.pdf: presentation.tex ap1_no_alloc.pdf a2pb2p2ab_no_alloc.pdf 3d_hy
 3d_hypercude_sliced_reshaped.pdf: presentation_plot.py
 	python presentation_plot.py
 
-poster_nips2011.pdf: poster_nips2011.tex
+BigLearn_poster.pdf: BigLearn_poster.tex
 	#latex BigLearn_NipsWorkshop.tex
 	#dvipdf latex BigLearn_NipsWorkshop
-	pdflatex poster_nips2011
-	pdflatex poster_nips2011
+	pdflatex BigLearn_poster
+	pdflatex BigLearn_poster
 	bibtexall
-	pdflatex poster_nips2011
+	pdflatex BigLearn_poster
