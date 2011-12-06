@@ -7,17 +7,24 @@
 \usepackage[utf8x]{inputenc}
 %\logo{\includegraphics[width=.8in]{UdeM_NoirBleu_logo_Marie_crop}}
 
+\newcommand{\superscript}[1]{\ensuremath{^{\textrm{#1}}}}
+
 \mode<presentation>
 
 \title{A Common GPU n-Dimensional Array for Python and C}
 
 \author{
 \footnotesize
-Frédéric Bastien, Arnaud Bergeron, Pascal Vincent and Yoshua Bengio \newline
-Département d'Informatique et de Recherche Opérationnelle \newline
+Frédéric Bastien\superscript{a}, Arnaud Bergeron\superscript{a}, Andreas Klöckner\superscript{b}, \newline
+Pascal Vincent\superscript{a} and Yoshua Bengio\superscript{a} \newline
+\superscript{a}Département d'Informatique et de Recherche Opérationnelle \newline
 Université de Montréal \newline
 Montréal, Canada \newline
-\texttt{\{bastienf, bergearn, vincentp, bengioy\}@iro.umontreal.ca}
+\texttt{\{bastienf, bergearn, vincentp, bengioy\}@iro.umontreal.ca} \newline
+\superscript{b}Courant Institute of Mathematical Sciences \newline
+New York University\newline
+New York, NY 10012, USA\newline
+\texttt{kloeckner@cims.nyu.edu}
 }
 
 \date{NIPS 2011 Big Learning Workshop}
@@ -28,6 +35,7 @@ Montréal, Canada \newline
 
 \begin{frame}[plain]
  \titlepage
+ \vspace{-4em}
  \includegraphics[width=1in]{lisabook_logo_text_3.png}
  \hfill
  \includegraphics[width=.8in]{UdeM_NoirBleu_logo_Marie_crop}
