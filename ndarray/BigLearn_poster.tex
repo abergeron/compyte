@@ -13,12 +13,14 @@
 \definecolor{Red}{rgb}{0.9,0.0,0.1}
 \definecolor{Black}{rgb}{0.0,0.0,0.0}
 \definecolor{Green}{rgb}{0.0,0.9,0.1}
+
 \let\Textsize\normalsize
 \def\Head#1{\noindent\hbox to \hsize{\hfil{\LARGE\color{DarkBlue} #1}}\bigskip}
 \def\LHead#1{\noindent{\LARGE\color{DarkBlue} #1}\smallskip}
 \def\Subhead#1{\noindent{\large\color{DarkBlue} #1}}
 \def\Title#1{\noindent{\Huge\color{Red} #1}}
 \TPGrid[40mm,40mm]{23}{12}  % 3 - 1 - 7 - 1 - 3 Columns
+%\TPGrid[25mm,20mm]{80}{114}  % 1 unit ~ 1 cm
 \parindent=0pt
 \parskip=0.5\baselineskip
 \newcommand{\ddd}{\,\mathrm{d}}
@@ -56,6 +58,7 @@
 \vspace{.5cm}
 \LHead{Frédéric Bastien}\\
 \LHead{Arnaud Bergeron}\\
+\LHead{Andreas Klöckner}\\
 \LHead{Pascal Vincent}\\
 \LHead{Yoshua Bengio}
 \end{minipage}
@@ -81,70 +84,36 @@
      \begin{minipage}{35.85cm}
        \vspace{1cm}
            \begin{center}
-      {\huge Common Framework}
+      {\huge Why do we need this?}
     \end{center}
-    {\Large
-      Many unsupervised learning algorithms are very similar:
-      {\Large
-    \begin{itemize}
-    \item Isomap;
-    \item Locally Linear Embedding (LLE);
-    \item Multidimensional Scaling (MDS);
-    \item Spectral Clustering;
-    \item Laplacian Eigenmaps.
-    \end{itemize}
-    }
-     All these algorithms can be cast in the same framework: computation of
-     an embedding for the training points obtained from the {\color{Green} principal
-     eigenvectors} of a symmetric matrix.
-
+           \begin{itemize}
+\item Efficient linear algebra is a the core of many scientific applications
+\item On the CPU, numpy ndarray provides a standard object (for python at least)
+\end{itemize}
+           \begin{center}
+      {\huge Why a new implementation?}
+    \end{center}
+%\begin{block}
+{There are already a number of existing GPU computing codebases:}
+Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
+%\end {block}
 \begin{enumerate}
-\item 
-  
-  Start from a data set with $n$ points in some space.  Construct a $n
-  \times n$ similarity matrix $M$.  Define $K_n$ as the two-argument function
-  (the kernel) which produces $M$ by $M_{ij} = K(x_i,x_j)$. $K$ can be
-  dependent of the data.
-%For some algorithms, $K_D(x_i,x_j)$ depends not only on $x_i$,$x_j$, but also on the rest of $D$
-%(e.g. Isomap and LLE), although we'll drop the $D$ subscript for the rest of
-%the paper.
-
-\item 
-  
-  Optionally transform $M$, yielding a normalized matrix $\tilde{M}$.
-  Equivalently, this corresponds to applying a symmetric two-argument
-  function $\tilde{K_n}$ to each pair of examples $(x_i,x_j)$ to obtain
-  $\tilde{M}_{ij}$.
-%Note that if $K$ positive semi-definite, the entries in $\tilde{M}$ can be interpreted
-%as dot products in some space.
-
-\item 
-  
-  Compute the $m$ largest eigenvalues $\lambda_j$ and eigenvectors $v_j$ of
-  $\tilde{M}$. Only positive eigenvalues should be considered.
-
-\item 
-  
-  The embedding of each example $x_i$ is the vector $y_i$ with $y_{ij}$ the
-  $i$-th element of the $j$-th principal eigenvector $v_j$ of $\tilde{M}$.
-  Alternatively (MDS and Isomap), the embedding is $e_i$, with $e_{ij} =
-  \sqrt{\lambda_j} y_{ij}$.  If the first $m$ eigenvalues are positive,
-  then $e_i . e_j$ is the best approximation of $\tilde{M}$ using only $m$
-  coordinates, in the squared error sense.
-
+\item All are incompatible
+\item They do not support the full range of numpy ndarray features
+\item None support both CUDA and OpenCL
 \end{enumerate}
-}
        \vspace{1cm}
      \end{minipage}
      \hspace{1cm}
    }
+
  \end{textblock}
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Empirical results
 
-\begin{textblock}{12}(0,6.4)
+\begin{textblock}{12}(0,3.2)
 
 \Ovalbox{
 {\color{Black}
@@ -153,14 +122,86 @@
   \vspace{1cm}
 
       \begin{center}
-      {\huge Out-of-sample Error $\approx$ Training Set Sensitivity}
+      {\huge Features desired}
    \end{center}
+
+\begin{itemize}
+\item Support for varying datatypes
+\item Support for an arbitrary number of dimensions
+\item Support for strides
+\item Support for broadcasting
+\item Compatibility with CUDA and OpenCL
+\end{itemize}
+\vspace{1cm}
+
+      \begin{center}
+      {\huge Easy to develop}
+   \end{center}
+
+\begin{itemize}
+\item Not always a good idea to make a gpu code work for all memory layout.
+  \begin{itemize}
+  \item Harder to code
+  \item Harder to get efficient
+  \end{itemize}
+\item Just call \begin{bf}as\_\{contiguous,fortran\}\_memory()\end{bf}
+ on inputs!
+\end{itemize}
+
+\end{minipage}
+\hspace{1cm}
+}}
+\end{textblock}
+ 
+\begin{textblock}{12}(0,5.4)
+
+\Ovalbox{
+{\color{Black}
+\hspace{1cm}
+\begin{minipage}{35.85cm}
+  \vspace{1cm}
+
+\begin{center}
+      {\huge Why has this not been done before?}
+   \end{center}
+\begin{itemize}
+\item Hard and time consuming to get right and efficient
+\item Certain algorithms cannot work on a general memory layout
+\item Indexing computations take up a significant portion of time on the GPU
+\end{itemize}
+
+
+\end{minipage}
+\hspace{1cm}
+}}
+\end{textblock}
+
+
+\begin{textblock}{12}(0,6.2)
+
+\Ovalbox{
+{\color{Black}
+\hspace{1cm}
+\begin{minipage}{35.85cm}
+  \vspace{1cm}
+
+      \begin{center}
+      {\huge Strides}
+   \end{center}
+
+\begin{itemize}
+\item Strides is a way to specify how much memory to skip between each element of a dimension.
+\item We can use strides to take submatrix B without copying any memory.
+%%\only<2>{We can use strides to take submatrix ${\color{cyan!50}B}$ without copying any memory.}
+\item Matrix A\hspace{5em}Matrix B
+%%\onslide<1->{Matrix ${\color{red!50}A}$}\hspace{5em}\onslide<2->{Matrix ${\color{cyan!50}B}$}
+\end{itemize}
 \begin{center}
 \end{center}
-Training set variability minus out-of-sample error, 
-wrt fraction of training set that has been substituted. Top left: MDS. Top right: spectral clustering
-or Laplacian eigenmaps. Bottom left: Isomap. Bottom right: LLE. Error bars are 95\% confidence intervals.
-
+\begin{center}
+\includegraphics{strides-1}
+\includegraphics{strides-2}
+\end{center}
 
 \vspace{1cm}
 
@@ -171,9 +212,47 @@ or Laplacian eigenmaps. Bottom left: Isomap. Bottom right: LLE. Error bars are 9
 \end{textblock}
  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Broadcasting
+ 
+\begin{textblock}{12}(0,7.7)
+\Ovalbox{
+\hspace{1cm}
+\begin{minipage}{35.85cm}
+\vspace{0.8cm}
+\begin{center}
+{\huge Broadcasting}
+\end{center}
+%\noindent
+
+%\only<1>{We have matrix ${\color{red!50}A}$ (size [8,8]) and we want to add a bias vector ${\color{cyan!50}b}$ (size [8,1]) to it.}
+%\only<2>{So we make virtual copies of ${\color{cyan!50}b}$ along the last dimension until it has the same size as ${\color{red!50}A}$.}
+\begin{itemize}
+\item We have matrix A (size [8,8]) and we want to add a bias vector b (size [8,1]) to it.
+\item This doesn't fit the rules for elementwise operations since both objects do not have the same number of elements.
+\end{itemize}
+\begin{center}
+\includegraphics{bcast-1}
+\end{center}
+
+\begin{itemize}
+\item So we make virtual copies of b along the last dimension until it has the same size as A.
+\item Then we can proceed as usual for elementwise.
+\end{itemize}
+
+\begin{center}
+\includegraphics{bcast-2}
+\end{center}
+
+\vspace{1cm}
+\end{minipage}
+\hspace{1cm}
+}
+\end{textblock}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Operator
 
- \begin{textblock}{12}(0,9.)
+ \begin{textblock}{12}(0,10.)
 
 \Ovalbox{
 
@@ -181,20 +260,30 @@ or Laplacian eigenmaps. Bottom left: Isomap. Bottom right: LLE. Error bars are 9
 \begin{minipage}{35.85cm}
 \vspace{1cm}
 \begin{center}
-  {\huge Linear Operator}
+  {\huge Comparison of existing implementations}
 \end{center}
-{\Large We associate with each $K_n$ a linear operator $G_n$
-  and with $K$ a linear operator $G$, as follows:
-  {\Large
-    $$ G_n f = \frac{1}{n} \sum_{i=1}^n \tilde{K}_n(\cdot,x_i) f(x_i)$$
-    }
-    and
-      {\Large
-        $$ G f = \int \tilde{K}(\cdot,y) f(y)p(y)dy$$
-        
-  }
-\noindent The Nystr\"om formula (2) gives the eigenfunctions of $G_n$.
-}
+
+%\begin{table}
+%%\rowcolors{2}{RoyalBlue!5}{RoyalBlue!23}
+%\begin{tabular}{|l|c|c|c|c|c|}
+%\hline
+%Package & strides & bcast & dims & types & backends \\
+%\hline
+%\hline
+%Theano & yes\footnote{as number of elements} & yes & any & float32 & CUDA \\
+%PyCUDA& no & no & any & all & CUDA \\
+%PyOpenCL & no & no & any & all & OpenCL \\
+%CUDAMat & no & yes\footnote{via a function} & 2 & float32 & CUDA \\
+%Gnumpy & no & yes & any & float32\footnote{and a hackish form of boolean} & CUDA \\
+%Thrust & no & no & 1 & all & CUDA \\
+%\hline
+%%\hiderowcolors
+%Desired & yes & yes & any & all & both \\
+%\hline
+%\end{tabular}
+%\end{table}
+
+
 \vspace{1.13cm}
 \end{minipage}
 \hspace{1cm}
@@ -317,32 +406,6 @@ index of the $i$-th such neighbor of $x$.}
   
  
   \vspace{1.35cm}
-\end{minipage}
-\hspace{1cm}
-}
-\end{textblock}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Convergence
- 
-\begin{textblock}{12}(0,7.4)
-\Ovalbox{
-\hspace{1cm}
-\begin{minipage}{35.85cm}
-\vspace{0.8cm}
-\begin{center}
-{\huge Convergence}
-\end{center}
-\noindent
-{\large
-If $K_n$ converges uniformly in probability,
-and if the eigenfunctions $f_{k,n}$ of $G_n$ 
-converge uniformly in probability, then they converge to the corresponding
-eigenfunctions of an operator $G$ defined with the {\bf real density $p$ generating the data}:
-$$ G f = \int K(\cdot,y) f(y)p(y)dy$$
-Intuitively, our out-of-sample formula thus approximates an "ideal" embedding, that
-would be obtained using this unknown density.
-}
-\vspace{1cm}
 \end{minipage}
 \hspace{1cm}
 }
