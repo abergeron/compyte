@@ -57,7 +57,7 @@ New York, NY 10012, USA\newline
 Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \end {block}
 \begin{enumerate}
-\item<2-> All are incompatible
+\item<2-> All are incompatible, which hinders code sharing.
 \item<3-> They do not support the full range of numpy ndarray features
 \item<4-> None support both CUDA and OpenCL
 \end{enumerate}
@@ -69,7 +69,7 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \item Support for varying datatypes
 \item Support for an arbitrary number of dimensions
 \item Support for strides
-\item Support for broadcasting
+\item \color{gray!80} Support for broadcasting
 \item Compatibility with CUDA and OpenCL
 \end{itemize}
 \end{frame}
@@ -88,11 +88,11 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 
 \begin{frame}{Features desired}
 \begin{itemize}
-\item Support for varying datatypes
-\item Support for an arbitrary number of dimensions
-\item Support for strides
+\item {\color{gray!80} Support for varying datatypes}
+\item {\color{gray!80} Support for an arbitrary number of dimensions}
+\item {\color{gray!80} Support for strides}
 \item Support for broadcasting
-\item Compatibility with CUDA and OpenCL
+\item {\color{gray!80} Compatibility with CUDA and OpenCL}
 \end{itemize}
 \end{frame}
 
@@ -109,23 +109,24 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 
 \begin{frame}{Features desired}
 \begin{itemize}
-\item Support for varying datatypes
-\item Support for an arbitrary number of dimensions
-\item Support for strides
-\item Support for broadcasting
+\item {\color{gray!80} Support for varying datatypes}
+\item {\color{gray!80} Support for an arbitrary number of dimensions}
+\item {\color{gray!80} Support for strides}
+\item {\color{gray!80} Support for broadcasting}
 \item Compatibility with CUDA and OpenCL
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Why has this not been done before?}
+\begin{frame}
+\begin{block}{Why has this not been done before?}
 \begin{itemize}
 \item Hard and time consuming to get right and efficient
-\item Certain algorithms cannot work on a general memory layout
-\item Indexing computations take up a significant portion of time on the GPU
+\begin{itemize}
+\item \normalsize Indexing computations take up a significant portion of time on the GPU
 \end{itemize}
-\end{frame}
-
-\begin{frame}{Easy to develop}
+\end{itemize}
+\end{block}
+\begin{block}{Easy to develop}
 \begin{itemize}
 \item Not always a good idea to make a gpu code work for all memory layout.
   \begin{itemize}
@@ -135,6 +136,7 @@ Theano, PyCUDA/PyOpenCL, CUDAmat, Gnumpy, Thrust, ...
 \item Just call \begin{bf}as\_\{contiguous,fortran\}\_memory()\end{bf}
  on inputs!
 \end{itemize}
+\end{block}
 \end{frame}
 
 \section{Existing Implementations}
@@ -220,12 +222,12 @@ Desired & yes & yes & any & all & both \\
 \end{center}
 \end{frame}
 
-\begin{frame}{Benchmarks (cont.)}
-\vspace{-1em}
-\begin{center}
-\includegraphics[width=0.85\textwidth]{a2pb2p2ab_no_alloc}
-\end{center}
-\end{frame}
+%\begin{frame}{Benchmarks (cont.)}
+%\vspace{-1em}
+%\begin{center}
+%\includegraphics[width=0.85\textwidth]{a2pb2p2ab_no_alloc}
+%\end{center}
+%\end{frame}
 
 \section{Conclusion}
 \begin{frame}{Future plans}
@@ -235,6 +237,10 @@ Desired & yes & yes & any & all & both \\
 \item<3-> Find ways to lower the overhead
 \item<4-> Use the implicit looping provided by CUDA and OpenCL
 \item<5-> World domination!
+\begin{itemize}
+\item<6-> Library authors $\to$ come see us
+\item<6-> Supervisers $\to$ talk to your students about this project
+\end{itemize}
 \end{itemize}
 \end{frame}
 
