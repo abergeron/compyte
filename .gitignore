@@ -18,3 +18,7 @@ distribute*tar.gz
 *.bbl
 *.blg
 *.log
+*.nav
+*.toc
+*.snm
+*.out
