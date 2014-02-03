@@ -694,6 +694,55 @@ int GpuArray_transfer(GpuArray *res, const GpuArray *a, void *new_ctx,
                            a->nd, a->dimensions, a->strides, 1);
 }
 
+int GpuArray_split(GpuArray **rs, const GpuArray *a, size_t n, size_t *p,
+                   unsigned int axis) {
+  size_t i;
+  ssize_t *starts, *stops, *steps;
+  int err;
+
+  starts = calloc(a->nd, sizeof(ssize_t));
+  stops = calloc(a->nd, sizeof(ssize_t));
+  steps = calloc(a->nd, sizeof(ssize_t));
+
+  if (starts == NULL || stops == NULL || steps == NULL) {
+    free(starts);
+    free(stops);
+    free(steps);
+    return GA_MEMORY_ERROR;
+  }
+
+  for (i = 0; i < a->nd; i++) {
+    starts[i] = 0;
+    stops[i] = a->dimensions[i];
+    steps[i] = 1;
+  }
+
+  for (i = 0; i <= n; i++) {
+    if (i > 0)
+      starts[axis] = p[i] - 1;
+    else
+      starts[axis] = 0;
+    if (i < n)
+      stops[axis] = p[i];
+    else
+      stops[axis] = a->dimensions[axis];
+    err = GpuArray_index(rs[i], a, starts, stops, steps)
+    if (err != GA_NO_ERROR)
+      break;
+  }
+
+  free(starts);
+  free(stops);
+  free(steps);
+
+  if (err != GA_NO_ERROR) {
+    size_t ii;
+    for (ii = 0; ii < i; ii++)
+      GpuArray_clear(rs[ii]);
+  }
+  return err;
+}
+
 const char *GpuArray_error(const GpuArray *a, int err) {
   void *ctx;
   int err2 = a->ops->property(NULL, a->data, NULL, GA_BUFFER_PROP_CTX, &ctx);

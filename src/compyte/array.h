@@ -502,6 +502,29 @@ COMPYTE_PUBLIC int GpuArray_transfer(GpuArray *res, const GpuArray *a,
                                      int may_share);
 
 /**
+ * Split an array into multiple views.
+ *
+ * The created arrays will be sub-portions of `a` where `axis` is
+ * divided according to the values in `p`.  No checks are performed on
+ * the values in `p` except to make sure that they don't reference
+ * values outside of the bounds of the source array.
+ *
+ * If an error occurs partway during the operation, the created arrays
+ * will be cleared before returning.
+ *
+ * \param rs list of array pointers to store results (must be of length n+1)
+ * \param a array to split
+ * \param n number of splits (length of p)
+ * \param p list of split points
+ * \param axis axis to split
+ *
+ * \return GA_NO_ERROR if the operation was succesful.
+ * \return an error code otherwise
+ */
+COMPYTE_PUBLIC int GpuArray_split(GpuArray **rs, const GpuArray *a, size_t n,
+                                  size_t *p, unsigned int axis);
+
+/**
  * Get a description of the last error in the context of `a`.
  *
  * The description may reflect operations with other arrays in the
