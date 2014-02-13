@@ -743,6 +743,84 @@ int GpuArray_split(GpuArray **rs, const GpuArray *a, size_t n, size_t *p,
   return err;
 }
 
+int GpuArray_concatenate(GpuArray *r, const GpuArray **as, size_t n,
+                         unsigned int axis, int restype) {
+  size_t *dims;
+  size_t i, j;
+  size_t res_off;
+  size_t sz;
+  unsigned int p;
+  int err = GA_NO_ERROR;
+
+  dims = calloc(as[0]->nd, sizeof(size_t));
+  if (dims == NULL)
+    return GA_MEMORY_ERROR;
+
+  for (p = 0; p < as[0]->nd; p++) {
+    dims[p] = as[0]->dimensions[p]
+  }
+
+  for (i = 1; i < n; i++) {
+    if (!GpuArray_ISALIGNED(as[i])) {
+      err = GA_UNALIGNED_ERROR;
+      goto afterloop;
+    }
+    if (as[i]->nd != as[0]->nd) {
+      err = GA_VALUE_ERROR;
+      goto afterloop;
+    }
+    for (p = 0; p < as[0]->nd; p++) {
+      if (p != axis && dims[p] != as[i]->dimensions[p]) {
+        err = GA_VALUE_ERROR;
+        goto afterloop;
+      } else if (p == axis) {
+        dims[p] += as[i]->dimensions[p];
+      }
+    }
+  }
+
+ afterloop:
+  if (err != GA_NO_ERROR) {
+    free(dims);
+    return err;
+  }
+
+  err = GpuArray_empty(r, as[0]->ops, GpuArray_context(as[0]), restype,
+                       as[0]->nd, dims, GA_C_ORDER);
+  free(dims);
+  if (err != GA_NO_ERROR) {
+    return err;
+  }
+
+  res_off = 0;
+  for (i = 0; i < n; i++) {
+    sz = compyte_get_elsize(restype);
+    for (j = 0; i < as[i]->nd; j++) sz *= as[i]->dimensions[i];
+
+    if (!GpuArray_ISONESEGMENT(as[i]) || GpuArray_ISFORTRAN(as[i]) ||
+        as[i]->typecode != r->typecode) {
+      err = r->ops->buffer_extcopy(as[i]->data, as[i]->offset, r->data,
+                                   res_off, as[i]->typecode, r->typecode,
+                                   as[i]->nd, as[i]->dimensions,
+                                   as[i]->strides, r->nd, r->dimensions,
+                                   r->strides);
+      if (err != GA_NO_ERROR)
+        goto fail;
+    } else {
+      err = r->ops->buffer_move(r->data, res_off, as[i]->data, as[i]->offset,
+                                sz);
+      if (err != GA_NO_ERROR)
+        goto fail;
+    }
+    res_off += sz;
+  }
+
+  return GA_NO_ERROR;
+ fail:
+  GpuArray_clear(r);
+  return err;
+}
+
 const char *GpuArray_error(const GpuArray *a, int err) {
   void *ctx;
   int err2 = a->ops->property(NULL, a->data, NULL, GA_BUFFER_PROP_CTX, &ctx);

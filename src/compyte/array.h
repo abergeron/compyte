@@ -525,6 +525,24 @@ COMPYTE_PUBLIC int GpuArray_split(GpuArray **rs, const GpuArray *a, size_t n,
                                   size_t *p, unsigned int axis);
 
 /**
+ * Concatenate the arrays in `as` along the axis `axis`.
+ *
+ * If an error occurs during the operation, the result array may be
+ * cleared before returning.
+ *
+ * \param r the result array
+ * \param as list of pointer to arrays to concatenate
+ * \param n number of array in list `as`
+ * \param axis the axis along which to concatenate
+ * \param restype the typecode of the result array
+ *
+ * \return GA_NO_ERROR if the operation was succesful.
+ * \return an error code otherwise
+ */
+COMPYTE_PUBLIC int GpuArray_concatenate(GpuArray *r, const GpuArray **as,
+                                        size_t n, unsigned int axis,
+                                        int restype);
+/**
  * Get a description of the last error in the context of `a`.
  *
  * The description may reflect operations with other arrays in the
