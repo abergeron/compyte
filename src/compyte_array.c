@@ -719,7 +719,7 @@ int GpuArray_split(GpuArray **rs, const GpuArray *a, size_t n, size_t *p,
 
   for (i = 0; i <= n; i++) {
     if (i > 0)
-      starts[axis] = p[i] - 1;
+      starts[axis] = p[i-1];
     else
       starts[axis] = 0;
     if (i < n)
