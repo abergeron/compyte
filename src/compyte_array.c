@@ -799,7 +799,7 @@ int GpuArray_concatenate(GpuArray *r, const GpuArray **as, size_t n,
   res_off = 0;
   for (i = 0; i < n; i++) {
     sz = compyte_get_elsize(restype);
-    for (j = 0; j < as[i]->nd; j++) sz *= as[i]->dimensions[i];
+    for (j = 0; j < as[i]->nd; j++) sz *= as[i]->dimensions[j];
 
     if (!GpuArray_ISONESEGMENT(as[i]) || GpuArray_ISFORTRAN(as[i]) ||
         as[i]->typecode != r->typecode) {
