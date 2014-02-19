@@ -760,6 +760,10 @@ int GpuArray_concatenate(GpuArray *r, const GpuArray **as, size_t n,
     dims[p] = as[0]->dimensions[p]
   }
 
+  if (!GpuArray_ISALIGNED(as[0])) {
+    err = GA_UNALIGNED_ERROR;
+    goto afterloop;
+  }
   for (i = 1; i < n; i++) {
     if (!GpuArray_ISALIGNED(as[i])) {
       err = GA_UNALIGNED_ERROR;
@@ -795,7 +799,7 @@ int GpuArray_concatenate(GpuArray *r, const GpuArray **as, size_t n,
   res_off = 0;
   for (i = 0; i < n; i++) {
     sz = compyte_get_elsize(restype);
-    for (j = 0; i < as[i]->nd; j++) sz *= as[i]->dimensions[i];
+    for (j = 0; j < as[i]->nd; j++) sz *= as[i]->dimensions[i];
 
     if (!GpuArray_ISONESEGMENT(as[i]) || GpuArray_ISFORTRAN(as[i]) ||
         as[i]->typecode != r->typecode) {
