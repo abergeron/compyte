@@ -60,6 +60,9 @@ void *cuda_make_ctx(CUcontext ctx, int flags) {
   res->blas_handle = NULL;
   res->refcnt = 1;
   res->flags = flags;
+  res->ext_cache = NULL;
+  memset(&res->a, 0, sizeof(extcopy_args));
+  res->hits = 0;
   err = cuStreamCreate(&res->s, 0);
   if (err != CUDA_SUCCESS) {
     free(res);
@@ -1099,7 +1102,7 @@ static int cuda_extcopy(gpudata *input, size_t ioff, gpudata *output, size_t oof
     int res = GA_SYS_ERROR;
     
     size_t nEls = 1, ls[2], gs[2];
-    gpukernel *k;
+    gpukernel *k = NULL;
     unsigned int i;
     int flags = GA_USE_PTX;
 
@@ -1114,78 +1117,133 @@ static int cuda_extcopy(gpudata *input, size_t ioff, gpudata *output, size_t oof
     if (input->ctx != output->ctx)
       return GA_INVALID_ERROR;
 
-    for (i = 0; i < a_nd; i++) {
+    if (input->ctx->ext_cache != NULL) {
+      cuda_context *ctx = input->ctx;
+      if (ctx->a.ioff == ioff && ctx->a.ooff == ooff &&
+          ctx->a.itype == intype && ctx->a.otype == outtype &&
+          ctx->a.ind == a_nd && ctx->a.ond == b_nd &&
+          memcmp(ctx->a.idims, a_dims, a_nd*sizeof(size_t)) == 0 &&
+          memcmp(ctx->a.odims, b_dims, b_nd*sizeof(size_t)) == 0 &&
+          memcmp(ctx->a.istr, a_str, a_nd*sizeof(ssize_t)) == 0 &&
+          memcmp(ctx->a.ostr, b_str, b_nd*sizeof(ssize_t)) == 0) {
+        k = ctx->ext_cache;
+        k->refcnt++;
+        ctx->hits++;
+      }
+    }
+    if (k == NULL) {
+      for (i = 0; i < a_nd; i++) {
         nEls *= a_dims[i];
-    }
-    if (nEls == 0) return GA_NO_ERROR;
+      }
+      if (nEls == 0) return GA_NO_ERROR;
 
-    in_t = map_t(intype);
-    out_t = map_t(outtype);
-    rmod = get_rmod(intype, outtype);
-    if (in_t == NULL || out_t == NULL) return GA_DEVSUP_ERROR;
-    arch = detect_arch(&res);
-    if (arch == NULL) return res;
+      in_t = map_t(intype);
+      out_t = map_t(outtype);
+      rmod = get_rmod(intype, outtype);
+      if (in_t == NULL || out_t == NULL) return GA_DEVSUP_ERROR;
+      arch = detect_arch(&res);
+      if (arch == NULL) return res;
 
-    if (asprintf(&strs[count], ELEM_HEADER_PTX, arch, bits, bits, bits,
-		 bits, in_t, out_t, bits, bits, bits, bits, bits, nEls,
-		 bits, bits) == -1)
+      if (asprintf(&strs[count], ELEM_HEADER_PTX, arch, bits, bits, bits,
+                   bits, in_t, out_t, bits, bits, bits, bits, bits, nEls,
+                   bits, bits) == -1)
         goto fail;
-    count++;
+      count++;
 
-    if (cuda_perdim_ptx(strs, &count, a_nd, a_dims, a_str, "a_p", bits) == -1)
+      if (cuda_perdim_ptx(strs, &count, a_nd, a_dims, a_str, "a_p", bits) == -1)
         goto fail;
-    if (cuda_perdim_ptx(strs, &count, b_nd, b_dims, b_str, "b_p", bits) == -1)
+      if (cuda_perdim_ptx(strs, &count, b_nd, b_dims, b_str, "b_p", bits) == -1)
         goto fail;
 
-    if (asprintf(&strs[count], "ld.param.u%u rp1, [a_data];\n"
-                 "cvt.s%u.s%u rp2, a_p;\n"
-                 "add.s%u rp1, rp1, rp2;\n"
-                 "ld.global.%s tmpa, [rp1+%" SPREFIX "u];\n"
-                 "cvt%s.%s.%s tmpb, tmpa;\n"
-                 "ld.param.u%u rp1, [b_data];\n"
-                 "cvt.s%u.s%u rp2, b_p;\n"
-                 "add.s%u rp1, rp1, rp2;\n"
-                 "st.global.%s [rp1+%" SPREFIX "u], tmpb;\n", bits,
-                 bits, bits,
-                 bits,
-		 in_t, ioff,
-                 rmod, out_t, in_t,
-                 bits,
-                 bits, bits,
-                 bits,
-                 out_t, ooff) == -1)
+      if (asprintf(&strs[count], "ld.param.u%u rp1, [a_data];\n"
+                   "cvt.s%u.s%u rp2, a_p;\n"
+                   "add.s%u rp1, rp1, rp2;\n"
+                   "ld.global.%s tmpa, [rp1+%" SPREFIX "u];\n"
+                   "cvt%s.%s.%s tmpb, tmpa;\n"
+                   "ld.param.u%u rp1, [b_data];\n"
+                   "cvt.s%u.s%u rp2, b_p;\n"
+                   "add.s%u rp1, rp1, rp2;\n"
+                   "st.global.%s [rp1+%" SPREFIX "u], tmpb;\n", bits,
+                   bits, bits,
+                   bits,
+                   in_t, ioff,
+                   rmod, out_t, in_t,
+                   bits,
+                   bits, bits,
+                   bits,
+                   out_t, ooff) == -1)
         goto fail;
-    count++;
+      count++;
 
-    if (asprintf(&strs[count], ELEM_FOOTER_PTX, bits, bits, nEls) == -1)
+      if (asprintf(&strs[count], ELEM_FOOTER_PTX, bits, bits, nEls) == -1)
         goto fail;
-    count++;
+      count++;
 
-    assert(count < (sizeof(strs)/sizeof(strs[0])));
+      assert(count < (sizeof(strs)/sizeof(strs[0])));
 
-    if (intype == GA_DOUBLE || outtype == GA_DOUBLE ||
-        intype == GA_CDOUBLE || outtype == GA_CDOUBLE) {
+      if (intype == GA_DOUBLE || outtype == GA_DOUBLE ||
+          intype == GA_CDOUBLE || outtype == GA_CDOUBLE) {
         flags |= GA_USE_DOUBLE;
-    }
+      }
 
-    if (outtype == GA_HALF || intype == GA_HALF) {
+      if (outtype == GA_HALF || intype == GA_HALF) {
         flags |= GA_USE_HALF;
-    }
+      }
 
-    if (compyte_get_elsize(outtype) < 4 || compyte_get_elsize(intype) < 4) {
+      if (compyte_get_elsize(outtype) < 4 || compyte_get_elsize(intype) < 4) {
         /* Should check for non-mod4 strides too */
         flags |= GA_USE_SMALL;
-    }
+      }
 
-    if (outtype == GA_CFLOAT || intype == GA_CFLOAT ||
-        outtype == GA_CDOUBLE || intype == GA_CDOUBLE) {
+      if (outtype == GA_CFLOAT || intype == GA_CFLOAT ||
+          outtype == GA_CDOUBLE || intype == GA_CDOUBLE) {
         flags |= GA_USE_COMPLEX;
-    }
+      }
 
-    types[0] = types[1] = GA_BUFFER;
-    k = cuda_newkernel(input->ctx, count, (const char **)strs, NULL, "extcpy",
-                       2, types, flags, &res);
-    if (k == NULL) goto fail;
+      types[0] = types[1] = GA_BUFFER;
+      k = cuda_newkernel(input->ctx, count, (const char **)strs, NULL, "extcpy",
+                         2, types, flags, &res);
+      if (k == NULL) goto fail;
+      // Cache the kernel;
+      {
+        cuda_context *ctx = input->ctx;
+        ctx->a.ioff = ioff;
+        ctx->a.ooff = ooff;
+        ctx->a.itype = intype;
+        ctx->a.otype = outtype;
+        ctx->a.ind = a_nd;
+        ctx->a.ond = b_nd;
+        if (ctx->a.idims != NULL)
+          free(ctx->a.idims);
+        ctx->a.idims = memdup(a_dims, a_nd*sizeof(size_t));
+
+        if (ctx->a.odims != NULL)
+          free(ctx->a.odims);
+        ctx->a.odims = memdup(b_dims, b_nd*sizeof(size_t));
+
+        if (ctx->a.istr != NULL)
+          free(ctx->a.istr);
+        ctx->a.istr = memdup(a_str, a_nd*sizeof(ssize_t));
+
+        if (ctx->a.ostr != NULL)
+          free(ctx->a.ostr);
+        ctx->a.ostr = memdup(b_str, b_nd*sizeof(ssize_t));
+        if (ctx->a.idims == NULL || ctx->a.odims == NULL ||
+            ctx->a.istr == NULL || ctx->a.ostr == NULL) {
+          free(ctx->a.idims); free(ctx->a.odims);
+          free(ctx->a.istr); free(ctx->a.ostr);
+          memset(&ctx->a, 0, sizeof(extcopy_args));
+          ctx->ext_cache = NULL;
+          ctx->hits = 0;
+          fprintf(stderr, "cache failure in extcopy\n");
+        } else {
+          ctx->ext_cache = k;
+          k->refcnt++;
+          fprintf(stderr, "cache replace after %u hits\n", ctx->hits);
+          ctx->hits = 0;
+        }
+      }
+    }
 
     /* Cheap kernel scheduling */
     res = cuda_property(NULL, NULL, k, GA_KERNEL_PROP_MAXLSIZE, ls);
@@ -1201,7 +1259,7 @@ failk:
     cuda_freekernel(k);
 fail:
     for (i = 0; i < count; i++) {
-        free(strs[i]);
+      free(strs[i]);
     }
     return res;
 }

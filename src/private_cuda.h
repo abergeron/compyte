@@ -48,6 +48,9 @@ typedef struct _cuda_context {
   CUresult err;
   CUstream s;
   void *blas_handle;
+  gpukernel *ext_cache;
+  extcopy_args a;
+  unsigned int hits;
   unsigned int refcnt;
   int flags;
 } cuda_context;

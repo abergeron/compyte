@@ -51,6 +51,26 @@ struct iovec {
 
 #include <string.h>
 
+typedef struct _extcopy_args {
+  size_t ioff;
+  size_t ooff;
+  int itype;
+  int otype;
+  unsigned int ind;
+  unsigned int ond;
+  const size_t *idims;
+  const size_t *odims;
+  const ssize_t *istr;
+  const ssize_t *ostr;
+} extcopy_args;
+
+static inline void *memdup(const void *p, size_t s) {
+  void *res = malloc(s);
+  if (res != NULL)
+    memcpy(s, p, s);
+  return res;
+}
+
 COMPYTE_LOCAL int GpuArray_is_c_contiguous(const GpuArray *a);
 COMPYTE_LOCAL int GpuArray_is_f_contiguous(const GpuArray *a);
 COMPYTE_LOCAL int GpuArray_is_aligned(const GpuArray *a);
