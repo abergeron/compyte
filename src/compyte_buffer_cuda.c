@@ -1214,24 +1214,24 @@ static int cuda_extcopy(gpudata *input, size_t ioff, gpudata *output, size_t oof
         ctx->a.ind = a_nd;
         ctx->a.ond = b_nd;
         if (ctx->a.idims != NULL)
-          free(ctx->a.idims);
+          free((void *)ctx->a.idims);
         ctx->a.idims = memdup(a_dims, a_nd*sizeof(size_t));
 
         if (ctx->a.odims != NULL)
-          free(ctx->a.odims);
+          free((void *)ctx->a.odims);
         ctx->a.odims = memdup(b_dims, b_nd*sizeof(size_t));
 
         if (ctx->a.istr != NULL)
-          free(ctx->a.istr);
+          free((void *)ctx->a.istr);
         ctx->a.istr = memdup(a_str, a_nd*sizeof(ssize_t));
 
         if (ctx->a.ostr != NULL)
-          free(ctx->a.ostr);
+          free((void *)ctx->a.ostr);
         ctx->a.ostr = memdup(b_str, b_nd*sizeof(ssize_t));
         if (ctx->a.idims == NULL || ctx->a.odims == NULL ||
             ctx->a.istr == NULL || ctx->a.ostr == NULL) {
-          free(ctx->a.idims); free(ctx->a.odims);
-          free(ctx->a.istr); free(ctx->a.ostr);
+          free((void *)ctx->a.idims); free((void *)ctx->a.odims);
+          free((void *)ctx->a.istr); free((void *)ctx->a.ostr);
           memset(&ctx->a, 0, sizeof(extcopy_args));
           ctx->ext_cache = NULL;
           ctx->hits = 0;

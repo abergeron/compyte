@@ -67,7 +67,7 @@ typedef struct _extcopy_args {
 static inline void *memdup(const void *p, size_t s) {
   void *res = malloc(s);
   if (res != NULL)
-    memcpy(s, p, s);
+    memcpy(res, p, s);
   return res;
 }
 
