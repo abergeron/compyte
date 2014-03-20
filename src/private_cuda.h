@@ -7,6 +7,17 @@
 #include <cuda.h>
 #endif
 
+#undef cuEventCreate
+#undef cuEventRecord
+#undef cuEventSynchronize
+#undef cuEventDestroy
+#undef cuStreamWaitEvent
+#define cuEventCreate(a, b) CUDA_SUCCESS
+#define cuEventRecord(a, b)
+#define cuEventSynchronize(a) CUDA_SUCCESS
+#define cuEventDestroy(a)
+#define cuStreamWaitEvent(h, e, f) CUDA_SUCCESS
+
 #include "private.h"
 
 #include "compyte/buffer.h"
