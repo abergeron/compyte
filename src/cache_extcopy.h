@@ -1,3 +1,6 @@
+#include <assert.h>
+#include <stdlib.h>
+
 /*
  * This whole cache business is ugly, but fast.
  */
@@ -35,9 +38,6 @@ static inline void key_free(const cache_key_t *k) {
   free((void *)k->istr);
   free((void *)k->ostr);
 }
-
-#include <assert.h>
-#include <stdlib.h>
 
 #include "cache_impl.h"
 
